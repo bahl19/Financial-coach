@@ -4,6 +4,8 @@
 
 AI Financial Coach is a multi-agent system that ingests a user's income, transactions, and debts (via CSV/PDF upload) and dispatches specialist agents that each reason over a grounded slice of the user's real numbers — spending patterns, debt payoff math, savings targets, budget fit, and goal feasibility — synthesized into one live, interactive dashboard.
 
+**🔗 Live app: [financialcoach.streamlit.app](https://financialcoach.streamlit.app/)**
+
 ---
 
 ## 🤖 Agent Architecture
@@ -51,7 +53,7 @@ streamlit run app.py
 ```
 
 ### 5. Load your data
-Open **http://localhost:8501**, click **"Load sample data"** for an instant demo, or upload your own CSV/PDF statement.
+Open **http://localhost:8501** (or the [live app](https://financialcoach.streamlit.app/)), click **"Load sample data"** for an instant demo, or upload your own CSV/PDF statement.
 
 ---
 
