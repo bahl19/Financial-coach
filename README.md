@@ -162,7 +162,7 @@ pdfplumber
 
 ## 👨‍💻 Built By
 
-**Shitij Bahl**
+C8 | Hackathon Group 13
 GitHub: [github.com/bahl19](https://github.com/bahl19)
 
 ---
