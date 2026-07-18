@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "agent": "Debt Analyzer",
+  "narrative": "Putting the allocated extra payment toward your highest-APR card first saves the most interest over time.",
+  "allocated_amount": 720.0,
+  "why_allocated": "ACTION_ACCELERATE_DEBT",
+  "expected_effect": "Pays off the Credit Card roughly 4 months sooner than minimums alone.",
+  "tradeoffs": "Less cash available for discretionary spending this month.",
+  "what_to_monitor": "Confirm the extra payment posts to principal, not just the next due date.",
+  "finding_refs": ["FINDING_HIGH_APR_DEBT"],
+  "trend_refs": ["TREND_DEBT_BALANCE_3M"],
+  "recommends_action_ids": ["ACTION_ACCELERATE_DEBT"],
+  "supporting_tables": {},
+  "live": false
+}

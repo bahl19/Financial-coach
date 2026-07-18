@@ -1,0 +1,11 @@
+{
+  "trend_id": "TREND_DINING_3M",
+  "metric": "dining_spend",
+  "period": "3_months",
+  "start_value": 187.00,
+  "end_value": 364.60,
+  "absolute_change": 177.60,
+  "percent_change": 94.97,
+  "direction": "increasing",
+  "classification": "sharp_increase"
+}

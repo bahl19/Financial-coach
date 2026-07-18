@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "transactions": [
+    {"date": "2026-01-01", "description": "Employer Payroll", "amount": 6000.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-01-02", "description": "Landlord LLC", "amount": -1200.0, "category": "Rent/Mortgage", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-01-08", "description": "Whole Foods", "amount": -300.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-01-14", "description": "Local Bistro", "amount": -100.0, "category": "Dining", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+
+    {"date": "2026-02-01", "description": "Employer Payroll", "amount": 6000.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-02-02", "description": "Landlord LLC", "amount": -1200.0, "category": "Rent/Mortgage", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-02-08", "description": "Whole Foods", "amount": -320.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-02-14", "description": "Local Bistro", "amount": -150.0, "category": "Dining", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+
+    {"date": "2026-03-01", "description": "Employer Payroll", "amount": 3000.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-03-02", "description": "Landlord LLC", "amount": -1200.0, "category": "Rent/Mortgage", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-08", "description": "Whole Foods", "amount": -340.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-14", "description": "Local Bistro", "amount": -350.0, "category": "Dining", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-20", "description": "Emergency Car Repair Shop", "amount": -900.0, "category": "Transport", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"}
+  ],
+  "monthly_income": 800.0,
+  "current_savings": 200.0,
+  "debts": [
+    {"name": "High Rate Card", "balance": 10000.0, "apr": 26.0, "min_payment": 350.0}
+  ],
+  "goals": [
+    {"name": "New Car Down Payment", "amount": 15000.0, "months": 2, "current": 100.0, "priority": "high"}
+  ],
+  "constraints": {
+    "minimum_monthly_buffer": 0.0,
+    "protected_categories": []
+  },
+  "assumptions": {
+    "currency": "USD",
+    "needs_ratio": 0.50,
+    "wants_ratio": 0.30,
+    "savings_ratio": 0.20,
+    "savings_apy": 0.04,
+    "emergency_fund_months": 3
+  }
+}

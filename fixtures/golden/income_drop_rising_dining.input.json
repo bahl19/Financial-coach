@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "transactions": [
+    {"date": "2026-03-01", "description": "Employer Payroll", "amount": 6200.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-03-02", "description": "Landlord LLC", "amount": -1700.0, "category": "Rent/Mortgage", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-05", "description": "Whole Foods", "amount": -460.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-10", "description": "City Electric", "amount": -140.0, "category": "Utilities", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-14", "description": "Local Bistro", "amount": -95.0, "category": "Dining Out", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-21", "description": "Ramen House", "amount": -92.0, "category": "Dining Out", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+
+    {"date": "2026-04-01", "description": "Employer Payroll", "amount": 6200.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-04-02", "description": "Landlord LLC", "amount": -1700.0, "category": "Rent/Mortgage", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-04-05", "description": "Whole Foods", "amount": -410.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-04-10", "description": "City Electric", "amount": -142.0, "category": "Utilities", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-04-14", "description": "Local Bistro", "amount": -130.0, "category": "Dining Out", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-04-21", "description": "Ramen House", "amount": -128.0, "category": "Dining Out", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+
+    {"date": "2026-05-01", "description": "Employer Payroll", "amount": 3400.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-05-02", "description": "Landlord LLC", "amount": -1700.0, "category": "Rent/Mortgage", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-05", "description": "Whole Foods", "amount": -260.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-10", "description": "City Electric", "amount": -145.0, "category": "Utilities", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-14", "description": "Local Bistro", "amount": -195.0, "category": "Dining Out", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-21", "description": "Ramen House", "amount": -190.0, "category": "Dining Out", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"}
+  ],
+  "monthly_income": 3400.0,
+  "current_savings": 3200.0,
+  "debts": [],
+  "goals": [
+    {"name": "New laptop", "amount": 1800.0, "months": 4, "current": 200.0, "priority": "medium"}
+  ],
+  "constraints": {
+    "minimum_monthly_buffer": 150.0,
+    "protected_categories": []
+  },
+  "assumptions": {
+    "currency": "USD",
+    "needs_ratio": 0.50,
+    "wants_ratio": 0.30,
+    "savings_ratio": 0.20,
+    "savings_apy": 0.04,
+    "emergency_fund_months": 3
+  }
+}

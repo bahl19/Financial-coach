@@ -11,32 +11,30 @@ class SpendingAnalyzerAgent(BaseAgent):
         "numbers-based observations. Be concise (under 180 words), no generic advice."
     )
 
-    def run(self, context: dict) -> dict:
-        df = context["transactions"]
-        by_cat = fc.spending_by_category(df)
-        monthly = fc.monthly_cashflow(df)
-        trends = fc.category_trends(df)
+    def _build_summary(self, transactions) -> tuple:
+        by_cat = fc.spending_by_category(transactions)
+        monthly = fc.monthly_cashflow(transactions)
+        trends = fc.category_trends(transactions)
 
-        data_summary = (
+        summary = (
             f"Spending by category (all-time total):\n{by_cat.to_string(index=False)}\n\n"
             f"Monthly cash flow (income vs expenses):\n{monthly.to_string(index=False)}\n\n"
             f"Month-over-month category trends (% change, most recent two months):\n"
             f"{trends.to_string(index=False) if not trends.empty else 'insufficient history'}"
         )
-        narrative, live = self._ask(data_summary)
-        if narrative is None:
-            narrative = self._fallback(by_cat, monthly, trends)
-
-        return {
-            "agent": self.name,
-            "narrative": narrative,
-            "by_category": by_cat,
-            "monthly_cashflow": monthly,
-            "trends": trends,
-            "live": live,
+        structured = {
+            # Spending does not allocate money - allocated_amount/why_allocated stay None.
+            "expected_effect": "Clearer visibility into where money is going each month.",
+            "what_to_monitor": "Categories trending sharply up or down month over month.",
+            "supporting_tables": {"by_category": by_cat, "monthly_cashflow": monthly, "trends": trends},
         }
+        return summary, structured
 
-    def _fallback(self, by_cat, monthly, trends) -> str:
+    def _fallback_narrative(self, structured: dict) -> str:
+        by_cat = structured["supporting_tables"]["by_category"]
+        monthly = structured["supporting_tables"]["monthly_cashflow"]
+        trends = structured["supporting_tables"]["trends"]
+
         lines = ["**Spending Analysis (offline rule-based mode)**"]
         if not by_cat.empty:
             top = by_cat.iloc[0]

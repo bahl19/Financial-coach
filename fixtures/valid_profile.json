@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "transactions": [
+    {"date": "2026-05-01", "description": "Employer Payroll", "amount": 6200.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-05-02", "description": "Landlord LLC", "amount": -1800.0, "category": "Rent/Mortgage", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-05", "description": "Whole Foods", "amount": -420.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-10", "description": "City Electric", "amount": -140.0, "category": "Utilities", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-15", "description": "Visa Payment", "amount": -120.0, "category": "Debt Payment", "category_confidence": 1.0, "needs_review": false, "transaction_type": "debt_payment"}
+  ],
+  "monthly_income": 6200.0,
+  "current_savings": 2500.0,
+  "debts": [
+    {"name": "Credit Card", "balance": 4200.0, "apr": 22.9, "min_payment": 120.0}
+  ],
+  "goals": [
+    {"name": "Emergency fund boost", "amount": 3000.0, "months": 6, "current": 500.0, "priority": "high"}
+  ],
+  "constraints": {
+    "minimum_monthly_buffer": 200.0,
+    "protected_categories": []
+  },
+  "assumptions": {
+    "currency": "USD",
+    "needs_ratio": 0.50,
+    "wants_ratio": 0.30,
+    "savings_ratio": 0.20,
+    "savings_apy": 0.04,
+    "emergency_fund_months": 3
+  }
+}

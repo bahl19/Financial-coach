@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "transactions": [
+    {"date": "2026-03-01", "description": "Employer Payroll", "amount": 2600.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-03-02", "description": "Landlord LLC", "amount": -1800.0, "category": "Rent/Mortgage", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-05", "description": "Corner Grocer", "amount": -520.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-10", "description": "City Electric", "amount": -180.0, "category": "Utilities", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-15", "description": "Visa Payment", "amount": -140.0, "category": "Debt Payment", "category_confidence": 1.0, "needs_review": false, "transaction_type": "debt_payment"},
+    {"date": "2026-03-18", "description": "Urgent Care Copay", "amount": -260.0, "category": "Healthcare", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-22", "description": "Auto Insurance", "amount": -165.0, "category": "Insurance", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-03-25", "description": "Gas Station", "amount": -210.0, "category": "Transport", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+
+    {"date": "2026-04-01", "description": "Employer Payroll", "amount": 2600.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-04-02", "description": "Landlord LLC", "amount": -1800.0, "category": "Rent/Mortgage", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-04-05", "description": "Corner Grocer", "amount": -545.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-04-10", "description": "City Electric", "amount": -185.0, "category": "Utilities", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-04-15", "description": "Visa Payment", "amount": -140.0, "category": "Debt Payment", "category_confidence": 1.0, "needs_review": false, "transaction_type": "debt_payment"},
+    {"date": "2026-04-22", "description": "Auto Insurance", "amount": -165.0, "category": "Insurance", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-04-25", "description": "Gas Station", "amount": -230.0, "category": "Transport", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+
+    {"date": "2026-05-01", "description": "Employer Payroll", "amount": 2600.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-05-02", "description": "Landlord LLC", "amount": -1800.0, "category": "Rent/Mortgage", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-05", "description": "Corner Grocer", "amount": -560.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-10", "description": "City Electric", "amount": -190.0, "category": "Utilities", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-15", "description": "Visa Payment", "amount": -140.0, "category": "Debt Payment", "category_confidence": 1.0, "needs_review": false, "transaction_type": "debt_payment"},
+    {"date": "2026-05-22", "description": "Auto Insurance", "amount": -165.0, "category": "Insurance", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"},
+    {"date": "2026-05-25", "description": "Gas Station", "amount": -245.0, "category": "Transport", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"}
+  ],
+  "monthly_income": 2600.0,
+  "current_savings": 400.0,
+  "debts": [
+    {"name": "Credit Card", "balance": 5100.0, "apr": 24.9, "min_payment": 140.0}
+  ],
+  "goals": [],
+  "constraints": {
+    "minimum_monthly_buffer": 100.0,
+    "protected_categories": ["Healthcare"]
+  },
+  "assumptions": {
+    "currency": "USD",
+    "needs_ratio": 0.50,
+    "wants_ratio": 0.30,
+    "savings_ratio": 0.20,
+    "savings_apy": 0.04,
+    "emergency_fund_months": 3
+  }
+}

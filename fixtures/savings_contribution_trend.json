@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "transactions": [
+    {"date": "2026-03-01", "description": "Employer Payroll", "amount": 7000.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-03-15", "description": "Transfer To Savings", "amount": -200.0, "category": "Savings/Investing", "category_confidence": 1.0, "needs_review": false, "transaction_type": "savings_transfer"},
+
+    {"date": "2026-04-01", "description": "Employer Payroll", "amount": 7000.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-04-15", "description": "Transfer To Savings", "amount": -350.0, "category": "Savings/Investing", "category_confidence": 1.0, "needs_review": false, "transaction_type": "savings_transfer"},
+
+    {"date": "2026-05-01", "description": "Employer Payroll", "amount": 7000.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-05-15", "description": "Transfer To Savings", "amount": -500.0, "category": "Savings/Investing", "category_confidence": 1.0, "needs_review": false, "transaction_type": "savings_transfer"}
+  ],
+  "monthly_income": 7000.0,
+  "current_savings": 5000.0,
+  "debts": [],
+  "goals": [],
+  "constraints": {
+    "minimum_monthly_buffer": 0.0,
+    "protected_categories": []
+  },
+  "assumptions": {
+    "currency": "USD",
+    "needs_ratio": 0.50,
+    "wants_ratio": 0.30,
+    "savings_ratio": 0.20,
+    "savings_apy": 0.04,
+    "emergency_fund_months": 3
+  }
+}

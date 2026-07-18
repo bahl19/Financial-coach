@@ -1,0 +1,11 @@
+{
+  "risk_id": "RISK_NEGATIVE_CASHFLOW",
+  "category": "cashflow",
+  "severity": "critical",
+  "urgency": "immediate",
+  "likelihood": "high",
+  "impact": "Savings will decline if the pattern continues.",
+  "metric_refs": ["monthly_surplus", "emergency_fund_months"],
+  "finding_refs": ["FINDING_INCOME_DROP"],
+  "mitigation_refs": ["ACTION_STABILIZE_CASHFLOW"]
+}

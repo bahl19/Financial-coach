@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "transactions": [
+    {"date": "2026-05-01", "description": "Employer Payroll", "amount": 4500.0, "category": "Income", "category_confidence": 1.0, "needs_review": false, "transaction_type": "income"},
+    {"date": "2026-05-06", "description": "Trader Joe's", "amount": -310.0, "category": "Groceries", "category_confidence": 1.0, "needs_review": false, "transaction_type": "expense"}
+  ],
+  "monthly_income": 4500.0,
+  "current_savings": 8000.0,
+  "debts": [],
+  "goals": [],
+  "constraints": {
+    "minimum_monthly_buffer": 0.0,
+    "protected_categories": []
+  },
+  "assumptions": {
+    "currency": "USD",
+    "needs_ratio": 0.50,
+    "wants_ratio": 0.30,
+    "savings_ratio": 0.20,
+    "savings_apy": 0.04,
+    "emergency_fund_months": 3
+  }
+}

@@ -1,62 +1,56 @@
-from agents.spending_agent import SpendingAnalyzerAgent
-from agents.debt_agent import DebtAnalyzerAgent
-from agents.savings_agent import SavingsStrategyAgent
-from agents.budget_agent import BudgetAdvisorAgent
-from agents.goal_agent import GoalPlannerAgent
-from utils import finance_calc as fc
+"""Chat-routing keyword map (Architecture Plan.md, Component 4/7).
+
+Everything this module used to own - `_enrich_context()`'s
+`monthly_surplus`/`extra_debt_payment` computation and the `run_full_report()`/
+`route_chat()` dict-comprehension fan-out - is retired, not refactored around.
+`build_roadmap()` (`utils/roadmap.py`) is now the only place a dollar
+allocation is decided, and `agents/graph.py` is the only orchestration path;
+keeping the old fan-out alive alongside it would mean two code paths, one of
+which still contained the double-allocation bug this plan exists to fix.
+
+`ROUTES` is preserved as specified (Implementation Plan - MVP 1.md, Phase 3)
+for Phase 8 to wire chat routing on top of `agents/graph.py` - the keyword
+map itself doesn't change, only what it dispatches to.
+"""
+
+ROUTES = {
+    "debt": ["debt", "loan", "payoff", "credit card", "apr", "interest"],
+    "savings": ["saving", "emergency fund", "invest"],
+    "budget": ["budget", "50/30/20", "afford", "overspend"],
+    "goals": ["goal", "vacation", "save up", "target"],
+    "spending": ["spend", "spending", "category", "trend", "expense"],
+}
+
+
+def match_routes(query: str) -> list:
+    """Returns the ROUTES keys whose keywords appear in `query`, or the
+    default fallback subset if none match. Pure lookup - no agent calls,
+    no context enrichment, no surplus computation."""
+    q = query.lower()
+    matched = [key for key, keywords in ROUTES.items() if any(kw in q for kw in keywords)]
+    return matched or ["spending", "budget"]
 
 
 class OrchestratorAgent:
-    """Coordinates the specialist financial agents and routes user chat queries
-    to whichever of them is relevant."""
+    """Backward-compatible shim so `app.py` (not rewired until Phase 8)
+    still *imports* successfully - the previous `_enrich_context()`,
+    `run_full_report()`, and `route_chat()` implementations are deleted,
+    not kept working, because they depended on interfaces the Phase 3
+    specialist refactor removed (whole-context dict in, no allocated-amount
+    guarantee). Calling either method raises clearly, at call time only, so
+    the rest of the app (upload, manual entry, review) still loads instead
+    of crashing at import - see Implementation Plan - MVP 1.md, Phase 8."""
 
-    ROUTES = {
-        "debt": ["debt", "loan", "payoff", "credit card", "apr", "interest"],
-        "savings": ["saving", "emergency fund", "invest"],
-        "budget": ["budget", "50/30/20", "afford", "overspend"],
-        "goals": ["goal", "vacation", "save up", "target"],
-        "spending": ["spend", "spending", "category", "trend", "expense"],
-    }
-
-    def __init__(self):
-        self.agents = {
-            "spending": SpendingAnalyzerAgent(),
-            "debt": DebtAnalyzerAgent(),
-            "savings": SavingsStrategyAgent(),
-            "budget": BudgetAdvisorAgent(),
-            "goals": GoalPlannerAgent(),
-        }
-
-    def _enrich_context(self, context: dict) -> dict:
-        monthly = fc.monthly_cashflow(context["transactions"])
-        avg_expenses = monthly["expenses"].mean() if not monthly.empty else 0
-        context["monthly_surplus"] = max(context.get("monthly_income", 0) - avg_expenses, 0)
-        context.setdefault("extra_debt_payment", context["monthly_surplus"] * 0.3)
-        return context
+    ROUTES = ROUTES
 
     def run_full_report(self, context: dict) -> dict:
-        context = self._enrich_context(context)
-        return {key: agent.run(context) for key, agent in self.agents.items()}
+        raise NotImplementedError(
+            "run_full_report() is retired - the new pipeline is utils.finance_calc + utils.roadmap "
+            "+ agents.graph, wired into the UI in Phase 8. See Implementation Plan - MVP 1.md."
+        )
 
     def route_chat(self, query: str, context: dict) -> str:
-        context = self._enrich_context(context)
-        q = query.lower()
-        matched = [key for key, keywords in self.ROUTES.items() if any(kw in q for kw in keywords)]
-        if not matched:
-            matched = ["spending", "budget"]
-
-        responses = []
-        for key in matched:
-            agent = self.agents[key]
-            if key == "goals" and not context.get("goals"):
-                continue
-            result = agent.run(context)
-            if key == "goals":
-                for g in result["goals"]:
-                    responses.append(f"**{agent.name} -- {g['name']}:** {g['narrative']}")
-            elif result.get("narrative"):
-                responses.append(f"**{agent.name}:** {result['narrative']}")
-
-        if not responses:
-            return "I don't have enough data yet -- try loading your transactions and debts first."
-        return "\n\n".join(responses)
+        raise NotImplementedError(
+            "route_chat() is retired - chat routing moves onto agents.graph in Phase 8. "
+            "See Implementation Plan - MVP 1.md."
+        )

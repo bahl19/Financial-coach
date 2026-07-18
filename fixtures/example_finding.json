@@ -1,0 +1,13 @@
+{
+  "finding_id": "FINDING_INCOME_DROP",
+  "type": "income_trend",
+  "title": "Income declined sharply",
+  "severity": "critical",
+  "urgency": "immediate",
+  "confidence": 1.0,
+  "fact_or_inference": "fact",
+  "metric_refs": ["monthly_income_trend", "monthly_surplus"],
+  "trend_refs": ["TREND_INCOME_3M"],
+  "impact": "Current spending is no longer supported by income.",
+  "recommended_response": "Stabilize cashflow before accelerating debt or savings."
+}
