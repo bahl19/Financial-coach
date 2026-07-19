@@ -33,6 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _ADAPTER_EXCEPTIONS = {
     "utils/llm.py": {"openai"},
     "utils/app_state.py": {"streamlit"},
+    "utils/auth.py": {"streamlit"},
 }
 
 # Forbidden for every *other* file under utils/ and agents/.

@@ -306,3 +306,47 @@ def test_cut_discretionary_spending_scenario_actually_changes_the_comparison():
 # Gate: "Golden tests from Phase 6 still pass" is verified by the full
 # suite, not re-implemented here.
 # --------------------------------------------------------------------------
+
+
+# --------------------------------------------------------------------------
+# Logto authentication gating (utils/auth.py). The real OIDC redirect
+# round-trip against Logto's hosted sign-in page cannot be driven headlessly
+# (same category of AppTest limitation as st.data_editor - see this file's
+# module docstring); what's tested here is that app.py's gate actually
+# blocks/unblocks the rest of the script, using monkeypatched auth state
+# exactly like test_full_sample_path_works_offline_with_no_exception already
+# asserts the *disabled* case implicitly by running the full flow unchanged.
+# --------------------------------------------------------------------------
+
+def test_auth_disabled_by_default_leaves_the_existing_app_unaffected():
+    from utils import auth as authn
+    assert authn.auth_enabled() is False, "no .streamlit/secrets.toml is committed; this must stay the default in CI"
+
+
+def test_signed_out_user_sees_login_screen_and_nothing_else_when_auth_enabled(monkeypatch):
+    from utils import auth as authn
+
+    monkeypatch.setattr(authn, "auth_enabled", lambda: True)
+    monkeypatch.setattr(authn, "is_logged_in", lambda: False)
+
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+
+    assert not at.exception
+    assert any("Sign in" in b.label for b in at.button)
+    # None of the ordinary app's widgets (only reachable past the auth gate)
+    # were ever rendered - st.stop() must have fired before app.py's own
+    # sidebar/upload widgets ran.
+    assert not any(b.key == "load_sample_button" for b in at.sidebar.button)
+
+
+def test_signed_in_user_reaches_the_ordinary_app_when_auth_enabled(monkeypatch):
+    from utils import auth as authn
+
+    monkeypatch.setattr(authn, "auth_enabled", lambda: True)
+    monkeypatch.setattr(authn, "is_logged_in", lambda: True)
+    monkeypatch.setattr(authn, "current_user_label", lambda: "test@example.com")
+
+    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    assert not at.exception
+    assert any("test@example.com" in c.value for c in at.sidebar.caption)

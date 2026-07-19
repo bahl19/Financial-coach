@@ -29,6 +29,7 @@ load_dotenv()
 from agents import graph as g
 from agents.orchestrator import build_chat_reply
 from utils import app_state, ingestion
+from utils import auth as authn
 from utils import finance_calc as fc
 from utils import region as rg
 from utils import reporting as rp
@@ -38,6 +39,11 @@ from utils.currency import CURRENCY_SYMBOLS, currency_symbol, format_money
 from utils.llm import is_live
 
 st.set_page_config(page_title="AI Financial Coach", page_icon="\U0001f4b0", layout="wide")
+
+if authn.auth_enabled() and not authn.is_logged_in():
+    authn.render_login_screen()
+    st.stop()
+authn.render_signed_in_sidebar_control()
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
