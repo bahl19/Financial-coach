@@ -1,45 +1,39 @@
 # Brand theme, defined natively so Streamlit's own widgets follow it.
 #
-# This replaces an earlier approach that declared a single static dark theme
-# and tried to repaint everything else at runtime with injected CSS. That
-# could not work: widgets like the number-input steppers and the select
-# dropdown read their colours straight from this file, so in light mode they
-# stayed navy no matter what the CSS said - and some of the override rules
-# were targeting elements that do not exist in this Streamlit version at all.
-# Defining [theme] and [theme.dark] here fixes those at the source, and also
-# reaches the canvas-rendered dataframe grid, which CSS genuinely cannot.
+# DARK ONLY. The same dark palette is declared for both the base theme and
+# the dark variant deliberately: Streamlit picks between them from the
+# viewer's Appearance setting (which follows the OS by default), so defining
+# only one would still let a light-preferring visitor land on a derived light
+# theme. Declaring both identical means the app renders dark for everyone,
+# regardless of their OS or Streamlit preference. This matches the brand -
+# UI/Financial Coach Landing.dc.html has no light variant at all.
 #
-# [theme] is the light theme; [theme.dark] overrides it when the viewer is in
-# dark mode (Streamlit's own Appearance setting, which follows the OS by
-# default). utils/theme.py reads the active mode via st.context.theme.type so
-# the brand CSS layer always agrees with whichever one is showing.
+# To re-enable light mode later: restore the light values under [theme]
+# (base = "light", backgroundColor #f5f9f8, secondaryBackgroundColor #ffffff,
+# textColor #0e1b2a, primaryColor/linkColor #0a7057, borderColor #d7e3e0,
+# dataframeHeaderBackgroundColor #eaf3f0) and set `_FORCE_MODE = None` in
+# utils/theme.py, which still carries the contrast-checked LIGHT palette.
 #
-# Colour choices are contrast-checked, not eyeballed. The brand mint
-# (#5ef3ce) is a FILL colour: as text on a light background it measures
-# 1.3:1 against WCAG's 4.5:1 minimum, which is why light mode looked wrong.
-# Light mode therefore uses a deep teal-green (#0a7057, 5.7:1 on the page
-# background) for text and solid fills, and keeps mint for dark mode where it
-# measures 13.2:1 on navy.
-#
-# Note: chartCategoricalColors has no per-mode variant, and the app's Plotly
-# charts are rendered with theme=None against the template in utils/theme.py
-# anyway, so it only affects native st.*_chart calls.
+# Why the palette is defined here rather than in CSS: several widgets read
+# these values directly - the number-input steppers, the select dropdown, and
+# the canvas-rendered dataframe grid - and cannot be restyled from a
+# stylesheet at all.
 
 [theme]
-base = "light"
-primaryColor = "#0a7057"
-backgroundColor = "#f5f9f8"
-secondaryBackgroundColor = "#ffffff"
-textColor = "#0e1b2a"
-linkColor = "#0a7057"
-borderColor = "#d7e3e0"
-dataframeHeaderBackgroundColor = "#eaf3f0"
-chartCategoricalColors = ["#0a7057", "#0e9d63", "#a15c07", "#d92d20", "#5b6b76"]
+base = "dark"
+primaryColor = "#5ef3ce"
+backgroundColor = "#081527"
+secondaryBackgroundColor = "#0d2238"
+textColor = "#e8eff6"
+linkColor = "#5ef3ce"
+borderColor = "#1e344b"
+dataframeHeaderBackgroundColor = "#0f2740"
+chartCategoricalColors = ["#5ef3ce", "#12c96f", "#f5b942", "#ff7a7a", "#8ca3b8"]
 
 [theme.sidebar]
-backgroundColor = "#eaf3f0"
-secondaryBackgroundColor = "#ffffff"
-borderColor = "#d7e3e0"
+backgroundColor = "#0d2238"
+secondaryBackgroundColor = "#0f2740"
+borderColor = "#1e344b"
 
 [theme.dark]
 base = "dark"

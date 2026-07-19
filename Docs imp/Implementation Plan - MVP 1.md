@@ -640,3 +640,15 @@ Reported by the user: light-mode colours were wrong, and separately, a request t
 **Spacing.** Added deliberate rhythm rather than ad-hoc nudges: wider main-container padding with a max width, larger vertical block gaps, real margins on headings, roomier metric/expander/button/tab padding, and more space between sidebar controls.
 
 **Verification:** 441 passed, 4 skipped. `ruff` and `mypy` clean. Browser-verified in both modes by driving Chromium with `color_scheme` set to light and dark across landing → sign-in gate → Step 3 → analysis, zero console errors in either. Test label assertions were updated for the icon directives; no test bypasses the change.
+
+### 2026-07-19 — Pinned to dark theme only
+
+Requested by the user: "by default use dark theme only."
+
+**Why both theme sections are declared identically.** Streamlit chooses between `[theme]` and `[theme.dark]` from the viewer's Appearance setting, which follows the operating system by default. Declaring only the dark one would still let a light-preferring visitor land on a derived light theme, so `.streamlit/config.toml` now carries the same dark palette in both - the app renders dark for everyone regardless of their OS or Streamlit preference. This matches the brand: `UI/Financial Coach Landing.dc.html` has no light variant at all.
+
+`utils/theme.py` gained `_FORCE_MODE`, which pins the brand CSS layer to the same mode so the two layers can never disagree (the disagreement between those layers was the root cause of the light-mode bug fixed in the previous entry). `render_theme_hint()` became a no-op rather than being deleted, so re-enabling light mode does not require editing `app.py`.
+
+**Nothing was thrown away.** The contrast-checked `LIGHT` palette and its measured ratios remain in `utils/theme.py`, and `config.toml` records the exact values to restore. Light mode is two coordinated changes away - `_FORCE_MODE = None` plus the light values under `[theme]` - and the comments in both files say so, because changing only one of the two would reintroduce precisely the widget/CSS split that caused the original bug.
+
+**Verification:** 441 passed, 4 skipped; `ruff` and `mypy` clean. Browser-verified by driving Chromium with `color_scheme` set to **light** and confirming `.stApp` still computes to `rgb(8, 21, 39)` (`#081527`) on both the landing and in-app screens - i.e. a light-preferring visitor gets the dark theme.

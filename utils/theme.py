@@ -1,5 +1,13 @@
-"""Brand theme: the navy/mint design language from the landing page, applied
-across the app in both light and dark mode.
+"""Brand theme: the navy/mint design language from the landing page.
+
+**The app ships dark only.** `.streamlit/config.toml` declares the same dark
+palette for both the base and dark variants, so Streamlit renders dark
+regardless of the viewer's OS or Appearance preference, and `_FORCE_MODE`
+below pins this CSS layer to match. That matches the brand - the source
+landing page has no light variant. The light palette and its contrast work
+are kept intact below so light mode can be restored by changing two things
+together (see `_FORCE_MODE`); the notes below explain why the split between
+this layer and `config.toml` exists at all.
 
 **How theming works here, and why it changed.** The first version of this
 module declared a single static *dark* theme in `.streamlit/config.toml` and
@@ -23,17 +31,15 @@ only the *brand* layer on top: fonts, headings, cards, accents, and spacing.
 
 **The custom sidebar toggle is gone.** It could not drive Streamlit's native
 theme (there is no Python API to set it), so keeping it would have meant the
-CSS layer and the widget layer disagreeing - which is exactly the bug being
-fixed. Mode is now switched through Streamlit's own Appearance setting
-(top-right menu → Settings → Appearance), which additionally follows the
-operating system preference by default.
+CSS layer and the widget layer disagreeing - exactly the bug above. With the
+app pinned to dark there is nothing left to toggle.
 
 **Colours are contrast-checked, not eyeballed.** Brand mint `#5ef3ce` is a
-*fill* colour: measured as text on the light background it is 1.3:1, far
-below WCAG AA's 4.5:1, which is why light mode read as broken. Light mode
-therefore uses a deep teal-green (`#0a7057`, 5.7:1) wherever the accent
-carries text or an icon, and reserves solid fills for buttons where it pairs
-with white (6.1:1). Dark mode keeps mint, which is 13.2:1 on navy.
+*fill* colour: measured as text on a light background it is 1.3:1, far below
+WCAG AA's 4.5:1, which is why light mode read as broken before. On navy it is
+13.2:1, so dark mode uses it for both text and fills. The retained LIGHT
+palette solves the same problem with a deep teal-green (`#0a7057`, 5.7:1) and
+white-on-fill (6.1:1), should light mode ever be re-enabled.
 
 Like `utils/app_state.py`, `utils/llm.py`, `utils/auth.py`, and
 `utils/landing.py`, this is a designated Streamlit adapter and is exempt from
@@ -51,7 +57,17 @@ import streamlit as st
 
 ThemeMode = Literal["dark", "light"]
 
-_DEFAULT_MODE: ThemeMode = "light"  # matches [theme] base in .streamlit/config.toml
+# The app ships DARK ONLY. `.streamlit/config.toml` declares the same dark
+# palette for both the base and dark variants so Streamlit's own widgets
+# render dark whatever the viewer's OS/Appearance preference is; this pins the
+# brand CSS layer to match, so the two can never disagree.
+#
+# Set to None to follow the viewer's actual mode again (the LIGHT palette
+# below is contrast-checked and ready); restore the light values in
+# config.toml at the same time, or the widgets and this layer will diverge.
+_FORCE_MODE: ThemeMode | None = "dark"
+
+_DEFAULT_MODE: ThemeMode = "dark"  # fallback when the active mode is unreadable
 
 # --------------------------------------------------------------------------
 # Palettes - kept in step with .streamlit/config.toml, which owns the same
@@ -101,9 +117,12 @@ _FONT_IMPORT = (
 
 
 def get_mode() -> ThemeMode:
-    """The mode Streamlit is actually rendering in. Falls back to the
-    `[theme]` base when unavailable (e.g. outside a script run, as in some
-    tests), so callers never have to handle `None`."""
+    """The mode to render in: `_FORCE_MODE` when the app pins one, otherwise
+    whatever Streamlit is actually showing. Falls back to `_DEFAULT_MODE`
+    when unreadable (e.g. outside a script run, as in some tests), so callers
+    never have to handle `None`."""
+    if _FORCE_MODE is not None:
+        return _FORCE_MODE
     try:
         mode = st.context.theme.type
     except Exception:
@@ -116,10 +135,11 @@ def palette(mode: ThemeMode | None = None) -> dict:
 
 
 def render_theme_hint() -> None:
-    """Points at Streamlit's native Appearance switcher, since this app no
-    longer ships its own (see the module docstring)."""
-    with st.sidebar:
-        st.caption("Light or dark: top-right menu → Settings → Appearance.")
+    """No-op while the app pins a single theme (`_FORCE_MODE`). Kept as a
+    seam so `app.py` does not need editing to re-enable the hint: if light
+    mode is restored, this is where to point users at Streamlit's Appearance
+    switcher."""
+    return
 
 
 def inject_theme_css(mode: ThemeMode | None = None) -> None:
