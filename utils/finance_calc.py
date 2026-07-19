@@ -13,9 +13,9 @@ over data the caller has already validated (utils/contracts.validate_profile).
 It depends only on utils/contracts.py, per Component 3's declared
 dependencies; it does not import from utils/ingestion.py (Component 2) even
 though both modules happen to reference the same category names as string
-literals - see utils/ingestion.py's module docstring for the categorization
-duplication this implies until Phase 8 retires this module's legacy
-`categorize_transactions()`/`CATEGORY_KEYWORDS`.
+literals. Categorization itself lives entirely in
+`utils.ingestion.categorize_with_confidence()` (Component 2) as of Phase 8 -
+this module no longer has its own copy.
 """
 from typing import List, Optional, Tuple
 
@@ -23,39 +23,9 @@ import pandas as pd
 
 from utils.contracts import FinancialProfile, FinancialSnapshot, Finding, Risk, Trend, validate_profile
 
-CATEGORY_KEYWORDS = {
-    "Rent/Mortgage": ["rent", "mortgage", "landlord", "apartments"],
-    "Groceries": ["grocery", "groceries", "supermarket", "whole foods", "trader joe", "safeway", "kroger"],
-    "Dining": ["restaurant", "cafe", "coffee", "starbucks", "doordash", "ubereats", "grubhub",
-               "mcdonald", "chipotle", "rooftop"],
-    "Transport": ["uber", "lyft", "gas station", "shell", "chevron", "exxon", "parking", "transit", "metro"],
-    "Utilities": ["electric", "water bill", "gas bill", "internet", "comcast", "at&t", "verizon", "utility"],
-    "Subscriptions": ["netflix", "spotify", "hulu", "amazon prime", "subscription", "gym", "planet fitness"],
-    "Entertainment": ["movie", "cinema", "amc", "concert", "steam", "playstation", "xbox", "tickets"],
-    "Shopping": ["amazon.com", "target", "walmart", "best buy", "mall"],
-    "Insurance": ["insurance", "geico", "state farm"],
-    "Healthcare": ["pharmacy", "cvs", "walgreens", "doctor", "clinic", "hospital"],
-    "Debt Payment": ["credit card payment", "loan payment", "student loan", "auto loan"],
-    "Savings/Investing": ["transfer to savings", "401k", "ira contribution", "brokerage", "investment"],
-}
-
 NEEDS_CATS = {"Rent/Mortgage", "Groceries", "Utilities", "Insurance", "Healthcare", "Transport", "Debt Payment"}
 SAVINGS_CATS = {"Savings/Investing"}
 # everything else (Dining, Subscriptions, Entertainment, Shopping, Other) counts as "Wants"
-
-
-def _categorize_row(row) -> str:
-    desc = str(row["description"]).lower()
-    for category, keywords in CATEGORY_KEYWORDS.items():
-        if any(kw in desc for kw in keywords):
-            return category
-    return "Income" if row["amount"] > 0 else "Other"
-
-
-def categorize_transactions(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.copy()
-    out["category"] = out.apply(_categorize_row, axis=1)
-    return out
 
 
 def spending_by_category(df: pd.DataFrame) -> pd.DataFrame:
@@ -544,7 +514,15 @@ def _classify_change(percent_change: Optional[float]) -> str:
 
 def _build_trend(trend_id: str, metric: str, period: str, start_value: float, end_value: float) -> Trend:
     absolute_change = end_value - start_value
-    percent_change = (absolute_change / start_value * 100) if start_value else None
+    # Divide by the *magnitude* of start_value, not its signed value. A metric
+    # like monthly net cashflow can have a negative baseline (a deficit); using
+    # the signed start_value flips percent_change's sign relative to
+    # absolute_change/direction whenever start_value < 0 - e.g. a deficit
+    # improving from -675 to -500 (absolute_change +175, genuinely improving)
+    # would otherwise report percent_change as -25.9% and classify as
+    # "moderate_decrease", directly contradicting direction="increasing".
+    # Found via Phase 6's manual golden-fixture review, not a failing test.
+    percent_change = (absolute_change / abs(start_value) * 100) if start_value else None
     return {
         "trend_id": trend_id,
         "metric": metric,
@@ -771,13 +749,32 @@ def _category_trend_findings(snapshot: dict, trends: List[Trend]) -> List[Findin
         if trend["classification"] not in _CATEGORY_FINDING_CLASSIFICATIONS:
             continue
         rising = trend["classification"] == "sharp_increase"
-        severity = "medium" if rising else "positive"
+        category = trend["metric"][: -len("_spend")] if trend["metric"].endswith("_spend") else trend["metric"]
+        is_essential = category in NEEDS_CATS
+
+        if rising:
+            severity, urgency = "medium", "this_month"
+            response = "Review whether this category change is intentional."
+        elif is_essential:
+            # A sharp drop in an essential/needs category (Healthcare, Groceries,
+            # Debt Payment, ...) is not confidently good news - it could mean
+            # skipped care, a missed payment, or a cut necessity, not
+            # disciplined discretionary saving. Found via Phase 6's manual
+            # golden-fixture review: the previous version labeled every
+            # decrease "positive" ("Keep up the trend"), including a
+            # Debt-Payment or Healthcare drop - actively bad advice.
+            severity, urgency = "medium", "this_month"
+            response = "Confirm this drop in an essential category is intentional, not a missed or skipped expense."
+        else:
+            severity, urgency = "positive", "long_term"
+            response = "Keep up the trend."
+
         findings.append(_finding(
             f"FINDING_{trend['trend_id'][len('TREND_'):]}_CHANGE", "category_trend",
-            f"{trend['metric']} {'increased' if rising else 'decreased'} sharply", severity,
-            "this_month" if rising else "long_term", 1.0, "fact", [], [trend["trend_id"]],
+            f"{trend['metric']} {'increased' if rising else 'decreased'} sharply", severity, urgency, 1.0, "fact",
+            [], [trend["trend_id"]],
             f"{trend['metric']} changed {trend['percent_change']:.0f}% over the recent period.",
-            "Review whether this category change is intentional." if rising else "Keep up the trend.",
+            response,
         ))
     return findings
 

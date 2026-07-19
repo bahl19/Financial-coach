@@ -8,9 +8,13 @@ allocation is decided, and `agents/graph.py` is the only orchestration path;
 keeping the old fan-out alive alongside it would mean two code paths, one of
 which still contained the double-allocation bug this plan exists to fix.
 
-`ROUTES` is preserved as specified (Implementation Plan - MVP 1.md, Phase 3)
-for Phase 8 to wire chat routing on top of `agents/graph.py` - the keyword
-map itself doesn't change, only what it dispatches to.
+`ROUTES`/`match_routes()` are preserved as specified (Implementation Plan -
+MVP 1.md, Phase 3); `build_chat_reply()` (Phase 8) is what actually wires
+chat routing on top of `agents/graph.py` - the keyword map itself never
+changed, only what it dispatches to. The `OrchestratorAgent` backward-
+compatible import shim that used to live here (raising `NotImplementedError`
+on call, just to keep `app.py` importable before Phase 8 rewired it) is
+deleted now that Phase 8 is done and nothing calls it.
 """
 
 ROUTES = {
@@ -31,26 +35,32 @@ def match_routes(query: str) -> list:
     return matched or ["spending", "budget"]
 
 
-class OrchestratorAgent:
-    """Backward-compatible shim so `app.py` (not rewired until Phase 8)
-    still *imports* successfully - the previous `_enrich_context()`,
-    `run_full_report()`, and `route_chat()` implementations are deleted,
-    not kept working, because they depended on interfaces the Phase 3
-    specialist refactor removed (whole-context dict in, no allocated-amount
-    guarantee). Calling either method raises clearly, at call time only, so
-    the rest of the app (upload, manual entry, review) still loads instead
-    of crashing at import - see Implementation Plan - MVP 1.md, Phase 8."""
+_ROUTE_TO_RESULT_KEY = {
+    "spending": "spending_result", "budget": "budget_result", "savings": "savings_result",
+    "debt": "debt_result", "goals": "goal_result",
+}
 
-    ROUTES = ROUTES
 
-    def run_full_report(self, context: dict) -> dict:
-        raise NotImplementedError(
-            "run_full_report() is retired - the new pipeline is utils.finance_calc + utils.roadmap "
-            "+ agents.graph, wired into the UI in Phase 8. See Implementation Plan - MVP 1.md."
+def build_chat_reply(query: str, graph_result: dict) -> str:
+    """Phase 8's chat entry point, wired on top of `agents/graph.py` per
+    this module's own docstring. Composes a reply purely from the *same*
+    `graph_result` the Overview/specialist tabs already render - matched to
+    the query via `match_routes()` - never a second graph invocation or a
+    freestanding LLM call. `goal_result` is the one specialist that returns
+    a list (one entry per goal), so its narratives are joined individually."""
+    matched_routes = match_routes(query)
+    narratives = []
+    for route in matched_routes:
+        result = graph_result.get(_ROUTE_TO_RESULT_KEY[route])
+        if result is None:
+            continue
+        if isinstance(result, list):
+            narratives.extend(item["narrative"] for item in result)
+        else:
+            narratives.append(result["narrative"])
+    if not narratives:
+        return (
+            "I don't have enough information yet to answer that - try asking about "
+            "spending, budget, debt, savings, or goals."
         )
-
-    def route_chat(self, query: str, context: dict) -> str:
-        raise NotImplementedError(
-            "route_chat() is retired - chat routing moves onto agents.graph in Phase 8. "
-            "See Implementation Plan - MVP 1.md."
-        )
+    return "\n\n---\n\n".join(narratives)

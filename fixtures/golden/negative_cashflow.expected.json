@@ -1,0 +1,233 @@
+{
+  "coach_top_priorities": [],
+  "findings": [
+    {
+      "confidence": 1.0,
+      "fact_or_inference": "fact",
+      "finding_id": "FINDING_CATEGORY_HEALTHCARE_CHANGE",
+      "severity": "medium",
+      "urgency": "this_month"
+    },
+    {
+      "confidence": 1.0,
+      "fact_or_inference": "fact",
+      "finding_id": "FINDING_NEGATIVE_CASHFLOW",
+      "severity": "critical",
+      "urgency": "immediate"
+    },
+    {
+      "confidence": 1.0,
+      "fact_or_inference": "fact",
+      "finding_id": "FINDING_LOW_EMERGENCY_FUND",
+      "severity": "high",
+      "urgency": "this_month"
+    },
+    {
+      "confidence": 1.0,
+      "fact_or_inference": "fact",
+      "finding_id": "FINDING_DATA_QUALITY_PARTIAL_TRAILING_MONTH",
+      "severity": "low",
+      "urgency": "immediate"
+    }
+  ],
+  "risks": [
+    {
+      "category": "cashflow",
+      "finding_refs": [
+        "FINDING_NEGATIVE_CASHFLOW"
+      ],
+      "impact": "Savings will decline and debt may grow if the pattern continues.",
+      "likelihood": "high",
+      "metric_refs": [
+        "gross_surplus",
+        "emergency_fund_months"
+      ],
+      "mitigation_refs": [],
+      "risk_id": "RISK_NEGATIVE_CASHFLOW",
+      "severity": "critical",
+      "urgency": "immediate"
+    },
+    {
+      "category": "savings",
+      "finding_refs": [
+        "FINDING_LOW_EMERGENCY_FUND"
+      ],
+      "impact": "A single unexpected expense could force new debt.",
+      "likelihood": "high",
+      "metric_refs": [
+        "emergency_fund_months"
+      ],
+      "mitigation_refs": [],
+      "risk_id": "RISK_INSUFFICIENT_EMERGENCY_FUND",
+      "severity": "high",
+      "urgency": "this_month"
+    },
+    {
+      "category": "debt",
+      "finding_refs": [],
+      "impact": "Paying only minimums accrues substantial interest relative to the balance.",
+      "likelihood": "high",
+      "metric_refs": [
+        "total_debt"
+      ],
+      "mitigation_refs": [],
+      "risk_id": "RISK_HIGH_INTEREST_DEBT",
+      "severity": "high",
+      "urgency": "this_month"
+    }
+  ],
+  "roadmap_actions": [],
+  "roadmap_allocation": {
+    "buffer_reserved": 100.0,
+    "debt_extra_payment": 0.0,
+    "goal_contributions": {},
+    "savings_contribution": 0.0
+  },
+  "snapshot_metrics": {
+    "allocatable_surplus": 0.0,
+    "average_monthly_expenses": 3146.666667,
+    "debt_to_income_percent": 5.384615,
+    "emergency_fund_months": 0.127119,
+    "gross_surplus": -546.666667,
+    "is_partial_period": true,
+    "monthly_surplus": -546.666667,
+    "period": "2026-05",
+    "required_commitments": 0.0,
+    "savings_rate_percent": -21.025641,
+    "total_debt": 5100.0
+  },
+  "trends": [
+    {
+      "absolute_change": 0.0,
+      "classification": "stable",
+      "direction": "flat",
+      "end_value": 2600.0,
+      "metric": "monthly_income",
+      "percent_change": 0.0,
+      "period": "3_months",
+      "start_value": 2600.0,
+      "trend_id": "TREND_INCOME"
+    },
+    {
+      "absolute_change": -175.0,
+      "classification": "stable",
+      "direction": "decreasing",
+      "end_value": 3100.0,
+      "metric": "monthly_expenses",
+      "percent_change": -5.343511,
+      "period": "3_months",
+      "start_value": 3275.0,
+      "trend_id": "TREND_EXPENSES"
+    },
+    {
+      "absolute_change": 175.0,
+      "classification": "moderate_increase",
+      "direction": "increasing",
+      "end_value": -500.0,
+      "metric": "monthly_surplus",
+      "percent_change": 25.925926,
+      "period": "3_months",
+      "start_value": -675.0,
+      "trend_id": "TREND_SURPLUS"
+    },
+    {
+      "absolute_change": 0.0,
+      "classification": "stable",
+      "direction": "flat",
+      "end_value": 140.0,
+      "metric": "debt_payment_spend",
+      "percent_change": 0.0,
+      "period": "3_months",
+      "start_value": 140.0,
+      "trend_id": "TREND_DEBT_PAYMENT"
+    },
+    {
+      "absolute_change": -2.872881,
+      "classification": "sharp_decrease",
+      "direction": "decreasing",
+      "end_value": 0.127119,
+      "metric": "emergency_fund_months",
+      "percent_change": -95.762712,
+      "period": "current_vs_target",
+      "start_value": 3.0,
+      "trend_id": "TREND_EMERGENCY_FUND_RUNWAY"
+    },
+    {
+      "absolute_change": 0.0,
+      "classification": "stable",
+      "direction": "flat",
+      "end_value": 140.0,
+      "metric": "Debt Payment_spend",
+      "percent_change": 0.0,
+      "period": "3_months",
+      "start_value": 140.0,
+      "trend_id": "TREND_CATEGORY_DEBT_PAYMENT"
+    },
+    {
+      "absolute_change": 40.0,
+      "classification": "stable",
+      "direction": "increasing",
+      "end_value": 560.0,
+      "metric": "Groceries_spend",
+      "percent_change": 7.692308,
+      "period": "3_months",
+      "start_value": 520.0,
+      "trend_id": "TREND_CATEGORY_GROCERIES"
+    },
+    {
+      "absolute_change": -260.0,
+      "classification": "sharp_decrease",
+      "direction": "decreasing",
+      "end_value": 0.0,
+      "metric": "Healthcare_spend",
+      "percent_change": -100.0,
+      "period": "3_months",
+      "start_value": 260.0,
+      "trend_id": "TREND_CATEGORY_HEALTHCARE"
+    },
+    {
+      "absolute_change": 0.0,
+      "classification": "stable",
+      "direction": "flat",
+      "end_value": 165.0,
+      "metric": "Insurance_spend",
+      "percent_change": 0.0,
+      "period": "3_months",
+      "start_value": 165.0,
+      "trend_id": "TREND_CATEGORY_INSURANCE"
+    },
+    {
+      "absolute_change": 0.0,
+      "classification": "stable",
+      "direction": "flat",
+      "end_value": 1800.0,
+      "metric": "Rent/Mortgage_spend",
+      "percent_change": 0.0,
+      "period": "3_months",
+      "start_value": 1800.0,
+      "trend_id": "TREND_CATEGORY_RENT_MORTGAGE"
+    },
+    {
+      "absolute_change": 35.0,
+      "classification": "moderate_increase",
+      "direction": "increasing",
+      "end_value": 245.0,
+      "metric": "Transport_spend",
+      "percent_change": 16.666667,
+      "period": "3_months",
+      "start_value": 210.0,
+      "trend_id": "TREND_CATEGORY_TRANSPORT"
+    },
+    {
+      "absolute_change": 10.0,
+      "classification": "stable",
+      "direction": "increasing",
+      "end_value": 190.0,
+      "metric": "Utilities_spend",
+      "percent_change": 5.555556,
+      "period": "3_months",
+      "start_value": 180.0,
+      "trend_id": "TREND_CATEGORY_UTILITIES"
+    }
+  ]
+}

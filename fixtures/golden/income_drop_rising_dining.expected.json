@@ -1,0 +1,181 @@
+{
+  "coach_top_priorities": [
+    "ACTION_STARTER_BUFFER",
+    "ACTION_FUND_GOAL_NEW_LAPTOP"
+  ],
+  "findings": [
+    {
+      "confidence": 1.0,
+      "fact_or_inference": "fact",
+      "finding_id": "FINDING_INCOME_DROP",
+      "severity": "critical",
+      "urgency": "immediate"
+    },
+    {
+      "confidence": 1.0,
+      "fact_or_inference": "fact",
+      "finding_id": "FINDING_CATEGORY_DINING_OUT_CHANGE",
+      "severity": "medium",
+      "urgency": "this_month"
+    },
+    {
+      "confidence": 1.0,
+      "fact_or_inference": "fact",
+      "finding_id": "FINDING_CASHFLOW_DETERIORATING",
+      "severity": "high",
+      "urgency": "this_month"
+    },
+    {
+      "confidence": 1.0,
+      "fact_or_inference": "fact",
+      "finding_id": "FINDING_LOW_EMERGENCY_FUND",
+      "severity": "high",
+      "urgency": "this_month"
+    },
+    {
+      "confidence": 1.0,
+      "fact_or_inference": "fact",
+      "finding_id": "FINDING_DATA_QUALITY_PARTIAL_TRAILING_MONTH",
+      "severity": "low",
+      "urgency": "immediate"
+    }
+  ],
+  "risks": [
+    {
+      "category": "savings",
+      "finding_refs": [
+        "FINDING_LOW_EMERGENCY_FUND"
+      ],
+      "impact": "A single unexpected expense could force new debt.",
+      "likelihood": "high",
+      "metric_refs": [
+        "emergency_fund_months"
+      ],
+      "mitigation_refs": [],
+      "risk_id": "RISK_INSUFFICIENT_EMERGENCY_FUND",
+      "severity": "high",
+      "urgency": "this_month"
+    }
+  ],
+  "roadmap_actions": [
+    {
+      "action_id": "ACTION_STARTER_BUFFER",
+      "priority": 1
+    },
+    {
+      "action_id": "ACTION_FUND_GOAL_NEW_LAPTOP",
+      "priority": 2
+    }
+  ],
+  "roadmap_allocation": {
+    "buffer_reserved": 150.0,
+    "debt_extra_payment": 0.0,
+    "goal_contributions": {
+      "New laptop": 377.166667
+    },
+    "savings_contribution": 377.166667
+  },
+  "snapshot_metrics": {
+    "allocatable_surplus": 754.333333,
+    "average_monthly_expenses": 2495.666667,
+    "debt_to_income_percent": 0.0,
+    "emergency_fund_months": 1.282223,
+    "gross_surplus": 904.333333,
+    "is_partial_period": true,
+    "monthly_surplus": 904.333333,
+    "period": "2026-05",
+    "required_commitments": 0.0,
+    "savings_rate_percent": 26.598039,
+    "total_debt": 0
+  },
+  "trends": [
+    {
+      "absolute_change": -2800.0,
+      "classification": "moderate_decrease",
+      "direction": "decreasing",
+      "end_value": 3400.0,
+      "metric": "monthly_income",
+      "percent_change": -45.16129,
+      "period": "3_months",
+      "start_value": 6200.0,
+      "trend_id": "TREND_INCOME"
+    },
+    {
+      "absolute_change": 3.0,
+      "classification": "stable",
+      "direction": "increasing",
+      "end_value": 2490.0,
+      "metric": "monthly_expenses",
+      "percent_change": 0.120627,
+      "period": "3_months",
+      "start_value": 2487.0,
+      "trend_id": "TREND_EXPENSES"
+    },
+    {
+      "absolute_change": -2803.0,
+      "classification": "sharp_decrease",
+      "direction": "decreasing",
+      "end_value": 910.0,
+      "metric": "monthly_surplus",
+      "percent_change": -75.491516,
+      "period": "3_months",
+      "start_value": 3713.0,
+      "trend_id": "TREND_SURPLUS"
+    },
+    {
+      "absolute_change": -1.717777,
+      "classification": "sharp_decrease",
+      "direction": "decreasing",
+      "end_value": 1.282223,
+      "metric": "emergency_fund_months",
+      "percent_change": -57.259249,
+      "period": "current_vs_target",
+      "start_value": 3.0,
+      "trend_id": "TREND_EMERGENCY_FUND_RUNWAY"
+    },
+    {
+      "absolute_change": 198.0,
+      "classification": "sharp_increase",
+      "direction": "increasing",
+      "end_value": 385.0,
+      "metric": "Dining Out_spend",
+      "percent_change": 105.882353,
+      "period": "3_months",
+      "start_value": 187.0,
+      "trend_id": "TREND_CATEGORY_DINING_OUT"
+    },
+    {
+      "absolute_change": -200.0,
+      "classification": "moderate_decrease",
+      "direction": "decreasing",
+      "end_value": 260.0,
+      "metric": "Groceries_spend",
+      "percent_change": -43.478261,
+      "period": "3_months",
+      "start_value": 460.0,
+      "trend_id": "TREND_CATEGORY_GROCERIES"
+    },
+    {
+      "absolute_change": 0.0,
+      "classification": "stable",
+      "direction": "flat",
+      "end_value": 1700.0,
+      "metric": "Rent/Mortgage_spend",
+      "percent_change": 0.0,
+      "period": "3_months",
+      "start_value": 1700.0,
+      "trend_id": "TREND_CATEGORY_RENT_MORTGAGE"
+    },
+    {
+      "absolute_change": 5.0,
+      "classification": "stable",
+      "direction": "increasing",
+      "end_value": 145.0,
+      "metric": "Utilities_spend",
+      "percent_change": 3.571429,
+      "period": "3_months",
+      "start_value": 140.0,
+      "trend_id": "TREND_CATEGORY_UTILITIES"
+    }
+  ]
+}

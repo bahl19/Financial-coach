@@ -11,14 +11,10 @@ parsing, per Component 2's declared dependencies. It does not import from
 utils/finance_calc.py (Component 3) and finance_calc.py must not import from
 here - the two components each depend only on contracts.py, not on each other.
 
-NOTE for whoever runs Phase 8 (Streamlit Integration): `utils/finance_calc.py`
-still has its own, older `categorize_transactions()`/`CATEGORY_KEYWORDS`,
-which is what today's `app.py` calls directly. This module's
-`categorize_with_confidence()` is the Phase 1+ replacement and necessarily
-carries its own copy of the keyword table, since the two components may not
-import from each other. When Phase 8 rewires `app.py` onto the new pipeline,
-retire `finance_calc.categorize_transactions()`/`CATEGORY_KEYWORDS` so only
-one keyword table remains.
+As of Phase 8, `utils/finance_calc.py`'s older `categorize_transactions()`/
+`CATEGORY_KEYWORDS` have been retired - `app.py` categorizes exclusively
+through this module's `categorize_with_confidence()`, so only one keyword
+table remains in the codebase.
 """
 
 from __future__ import annotations
@@ -116,6 +112,22 @@ def tag_transaction_types(transactions: pd.DataFrame) -> pd.DataFrame:
     fallback = out["amount"].apply(lambda amount: "income" if amount > 0 else "expense")
     out["transaction_type"] = out["category"].map(_CATEGORY_TO_TRANSACTION_TYPE).fillna(fallback)
     return out
+
+
+def apply_category_corrections(transactions: pd.DataFrame, corrections: dict) -> pd.DataFrame:
+    """Applies user-supplied category corrections (`transaction_index ->
+    new category`, as produced by a category-review UI) on top of an
+    already-`categorize_with_confidence()`'d frame. A corrected row is full
+    confidence and no longer needs review. `transaction_type` is re-tagged
+    afterward since it is category-derived (`tag_transaction_types()`) - a
+    corrected category left pointing at its pre-correction type would be a
+    silent inconsistency. Returns a new dataframe; never mutates the input."""
+    out = transactions.copy()
+    for index, category in corrections.items():
+        out.loc[index, "category"] = category
+        out.loc[index, "category_confidence"] = _MATCHED_CONFIDENCE
+        out.loc[index, "needs_review"] = False
+    return tag_transaction_types(out)
 
 
 def build_review_items(transactions: pd.DataFrame) -> List[ReviewItem]:

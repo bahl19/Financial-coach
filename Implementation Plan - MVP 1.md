@@ -25,12 +25,12 @@ This revision incorporates `Review.md`'s structural review and the fixes recorde
 | 3 | Roadmap Planner (LangGraph) + structured specialists + Scenarios | Done (see caveats in gate) | 2026-07-19 | Automated test suite (202/202) |
 | 4 | Consistency Validator | Done (see caveats in gate) | 2026-07-19 | Automated test suite (228/228) |
 | 5 | Coach Synthesis | Done (see caveats in gate) | 2026-07-19 | Automated test suite (263/263) |
-| 6 | Golden Fixture Freeze | Not started | | |
-| 7 | Reports & tracker | Not started | | |
-| 8 | Streamlit integration | Not started | | |
-| 9 | Validation, property tests & regression | Not started | | |
-| 10 | UX & narrative polish | Not started | | |
-| 11 | Demo rehearsal & release gate | Not started | | |
+| 6 | Golden Fixture Freeze | Done (see caveats in gate) | 2026-07-19 | Automated test suite (275/275) |
+| 7 | Reports & tracker | Done (see caveats in gate) | 2026-07-19 | Automated test suite (304/304) |
+| 8 | Streamlit integration | Done (see caveats in gate) | 2026-07-19 | Automated test suite (337/337, updated by a Phase 11 rehearsal fix) |
+| 9 | Validation, property tests & regression | Done (see caveats in gate) | 2026-07-19 | Automated test suite (337/337) |
+| 10 | UX & narrative polish | Done (see caveats in gate) | 2026-07-19 | Automated test suite (337/337, unchanged) |
+| 11 | Demo rehearsal & release gate | Done (see caveats in gate) | 2026-07-19 | Two consecutive clean rehearsal runs, 13/13 both times |
 
 ---
 
@@ -291,13 +291,17 @@ This phase exists because expected outputs cannot be authored earlier: the expec
 - Add `tests/test_golden.py` asserting exact equality on all numeric and enum fields, ignoring narrative prose (per `Review.md` item 27: "Narrative wording may vary, but no amount, priority, severity, or factual claim may drift").
 
 **Exit gate — all must pass**
-- [ ] All three golden fixtures have reviewed, committed `*.expected.json` files
-- [ ] `tests/test_golden.py` passes
-- [ ] A deliberate one-cent change to any allocation value fails the golden test
-- [ ] A deliberate severity change on any finding fails the golden test
-- [ ] A reworded narrative does **not** fail the golden test
-- [ ] The negative-cashflow expected output was reviewed and signed off by a second person
-- [ ] PR merged to `main`, tagged `phase6-done`
+- [x] All three golden fixtures have reviewed, committed `*.expected.json` files — every number in all three (`stable_high_surplus`, `negative_cashflow`, `income_drop_rising_dining`) was hand-recomputed from the raw fixture transactions against `snapshot.metrics`, every `Trend`, every `Finding`, every `Risk`, `roadmap.allocation`, and `coach_summary.top_priorities` before freezing
+- [x] `tests/test_golden.py` passes (275/275 total suite, including 6 golden-specific tests)
+- [x] A deliberate one-cent change to any allocation value fails the golden test — verified live: perturbed `income_drop_rising_dining.expected.json`'s `savings_contribution` by +$0.01, ran the suite, watched it fail, then reverted and re-confirmed green
+- [x] A deliberate severity change on any finding fails the golden test — same live perturb/fail/revert exercise, on `FINDING_LOW_EMERGENCY_FUND`'s severity
+- [x] A reworded narrative does **not** fail the golden test — `test_golden_fixture_ignores_narrative_reword` rewrites every specialist's `narrative` field before comparing; passes because the captured structure never includes a prose field at all
+- [ ] The negative-cashflow expected output was reviewed and signed off by a second person — **caveat:** hand-verified in this session (every metric, trend, finding, and risk recomputed from the raw transactions and cross-checked against the code), but no literal second human reviewer was available; this remains genuinely unverified as stated and needs an actual second person before treating it as satisfied
+- [ ] PR merged to `main`, tagged `phase6-done` — pending explicit request; not performed unilaterally
+
+> **Caveat — bug found and fixed during this phase's manual review (not by a failing test):** `build_roadmap()`'s goal-funding step (`utils/roadmap.py`, Step 5) already computed each goal's real, allocation-aware feasibility (`goal_feasibility()` against `ledger.remaining`, the surplus genuinely left after higher-priority steps) but discarded that result — every `ACTION_FUND_GOAL_*` action was unconditionally `severity: "medium"`, `urgency: "next_90_days"`, even when the goal was funded at less than its required monthly rate. This is distinct from `snapshot.goal_results` (Phase 1's preliminary, allocation-*un*aware check against the full `allocatable_surplus`, computed before the roadmap runs and necessarily blind to competing claims on that surplus) — a goal can pass that preliminary check yet still come up short here. Found via `income_drop_rising_dining`: "New laptop" needs $400/month but only $377.17 remained once the starter buffer claimed its 50% share first; the goal specialist's own narrative already said so in prose, but the roadmap action itself, `coach_summary.top_priorities`, and the action bucket it lands in did not reflect it. Fixed by elevating the action to `severity: "high"` / `urgency: "this_month"` whenever the goal's contribution falls short of its own `required_monthly` — using data `build_roadmap()` already has on hand, no restructuring required. Two regression tests added to `tests/test_roadmap.py` (`test_underfunded_goal_action_is_elevated_to_high_severity_this_month`, `test_fully_funded_goal_action_keeps_medium_severity_next_90_days`); confirmed the fix does not change `stable_high_surplus` or `negative_cashflow`'s output (the former's goal is fully funded, the latter has none). This is the third bug this phase's manual review has found — see Phase 6 for the two `finance_calc.py` fixes (`_build_trend()`'s percent-change sign, `_category_trend_findings()`'s essential-category mislabeling) made earlier in this same review pass.
+>
+> A related, narrower limitation remains and is intentionally **not** fixed here: `FINDING_GOAL_SHORTFALL_*` and `RISK_GOAL_FAILURE` still key off the Phase-1 preliminary check, not the roadmap's actual allocation, because `derive_findings()`/`derive_risks()` run *before* `build_roadmap()` in the pipeline (the roadmap depends on findings/risks, not the reverse) — making them allocation-aware would require restructuring that ordering, which is out of this phase's scope. The fix above ensures the shortfall is still visible in the roadmap action itself and in `coach_summary.top_priorities`/`actions_this_month`, so a user is not left unaware of it; it does not make the Finding/Risk pair itself allocation-aware.
 
 ---
 
@@ -311,14 +315,14 @@ This phase exists because expected outputs cannot be authored earlier: the expec
 - `buffer_reserved` is labeled distinctly from the distributed allocation amounts (`debt_extra_payment` / `goal_contributions` / `savings_contribution`) — it is a planning constraint, not a monthly transfer, and must not be summed into any "money in motion" total.
 
 **Exit gate — all must pass**
-- [ ] Exported values match the source snapshot and roadmap exactly (no independently recalculated numbers)
-- [ ] A report with no debts or goals still renders
-- [ ] Tracker totals do not exceed the roadmap's distributed allocation (excluding `buffer_reserved`)
-- [ ] Report renders the Coach Summary's fixed section order
-- [ ] Every cited `finding_id`/`risk_id`/`trend_id`/`action_id` resolves
-- [ ] `buffer_reserved` is visually and semantically distinct from distributed amounts
-- [ ] Golden tests from Phase 6 still pass
-- [ ] PR merged to `main`, tagged `phase7-done`
+- [x] Exported values match the source snapshot and roadmap exactly (no independently recalculated numbers) — `assemble_report_content()` only reads/copies fields; the module contains no arithmetic beyond summing `roadmap.allocation.goal_contributions` into `TrackerRow.goal_contributions` (that field is a single aggregate by contract, not a per-goal breakdown, so summing already-known figures into it is not a new financial claim)
+- [x] A report with no debts or goals still renders
+- [x] Tracker totals do not exceed the roadmap's distributed allocation (excluding `buffer_reserved`) — verified per-row (each row repeats the same monthly figures, so equality holds, never exceeding) across all 7 fixtures
+- [x] Report renders the Coach Summary's fixed section order — `_COACH_SECTIONS` reuses the exact field order `synthesize_coach_summary()` (Phase 5) already fixes, not a second hardcoded copy of that order
+- [x] Every cited `finding_id`/`risk_id`/`trend_id`/`action_id` resolves — checked across all 7 fixtures, including refs cited transitively (finding→trend, risk→finding, action→finding/risk, coach summary→any)
+- [x] `buffer_reserved` is visually and semantically distinct from distributed amounts — labeled "(planning constraint, not a distributed transfer)", rendered before and outside the "Distributed monthly allocation" list, and absent from every `TrackerRow`
+- [x] Golden tests from Phase 6 still pass — full suite re-run after this phase, 304/304, `test_golden.py` unaffected
+- [ ] PR merged to `main`, tagged `phase7-done` — pending explicit request; not performed unilaterally
 
 ---
 
@@ -335,16 +339,22 @@ This phase exists because expected outputs cannot be authored earlier: the expec
 **Standing constraint:** the UI is the only writer to `st.session_state`; domain components (including graph nodes) stay pure and return values rather than mutating shared state.
 
 **Exit gate — all must pass**
-- [ ] App does not run analysis before required inputs validate
-- [ ] Editing a review category changes the resulting spending/budget output
-- [ ] Download buttons work in offline mode (no OpenRouter key)
-- [ ] Specialist tabs and chat work with the generated profile context
-- [ ] Specialist tabs and chat are served through the same LangGraph nodes as the overview (consistent output across tabs)
-- [ ] Overview tab renders the Coach Summary, not a concatenation of five agent outputs
-- [ ] A triggered validator fallback is visible in the UI
-- [ ] One full end-to-end sample path works offline
-- [ ] Golden tests from Phase 6 still pass
-- [ ] PR merged to `main`, tagged `phase8-done`
+- [x] App does not run analysis before required inputs validate — the "Confirm & run analysis" button is `disabled` whenever `validate_profile()`/a missing `monthly_income` reports an issue; verified via `AppTest` (button disabled with no income set, enabled once set, no Step 4/tabs render until then)
+- [x] Editing a review category changes the resulting spending/budget output — `streamlit.testing.v1.AppTest` cannot drive `st.data_editor` in this Streamlit version (no `.data_editor` query interface exists on the harness), so this is verified by calling the pure function the widget's output feeds, `utils.ingestion.apply_category_corrections()`, directly: a corrected category changes `fc.spending_by_category()`'s breakdown and re-tags `transaction_type` (budget reads from spending's own supporting_tables, so the effect propagates)
+- [x] Download buttons work in offline mode (no OpenRouter key) — verified with no `OPENROUTER_API_KEY` set (`is_live()` asserted `False` in the test itself, not assumed)
+- [x] Specialist tabs and chat work with the generated profile context
+- [x] Specialist tabs and chat are served through the same LangGraph nodes as the overview (consistent output across tabs) — `build_chat_reply()` reuses the *same* `graph_result` object's narratives (asserted byte-identical, not just similar), never a second `run_graph()` call or a freestanding LLM call
+- [x] Overview tab renders the Coach Summary, not a concatenation of five agent outputs — verified negatively too: none of the five specialists' raw `narrative` strings appear anywhere in the Overview tab's rendered markdown
+- [x] A triggered validator fallback is visible in the UI — verified by forcing `validation_result.fallback_used = True` and confirming the warning banner renders (a real Phase-4 fallback is rare to trigger naturally; forcing the flag is the same code path the UI actually branches on)
+- [x] One full end-to-end sample path works offline
+- [x] Golden tests from Phase 6 still pass — full suite re-run, 321/321
+- [ ] PR merged to `main`, tagged `phase8-done` — pending explicit request; not performed unilaterally
+
+> **Caveats:**
+> - Retired `finance_calc.categorize_transactions()`/`CATEGORY_KEYWORDS` per Phase 1's note now that `app.py` categorizes exclusively through `utils.ingestion.categorize_with_confidence()` — one keyword table remains in the codebase, not two.
+> - **Bug found and fixed while smoke-testing this phase (not by a pre-written failing test):** `app.py` recomputes and calls `app_state.set_profile_fields()`/`set_categorized_df()` unconditionally on *every* script rerun (Streamlit reruns the whole script on any widget interaction, not only when that widget's own value changed). Their original implementation invalidated the last analysis (`graph_result`) on every call, so an unrelated rerun — e.g. sending a chat message — silently wiped out an already-computed analysis and bounced the user back to "confirm your details," even though nothing about their profile had changed. Fixed by invalidating only when the incoming value genuinely differs from what's already stored (scalar/dict equality for profile fields, `DataFrame.equals()` for the categorized transactions). Four regression tests added to `tests/test_app_state.py` proving both the "unchanged -> no invalidation" and "changed -> invalidation" cases for each setter.
+> - Deleted `agents/orchestrator.py`'s `OrchestratorAgent` backward-compatible import shim (`run_full_report`/`route_chat`, both of which only ever raised `NotImplementedError` — added in Phase 3 solely to keep `app.py` importable before this phase rewired it). Confirmed nothing in `app.py`, `agents/`, `utils/`, or `tests/` still references it before removing it; chat routing is now `build_chat_reply()`, added in this phase directly on top of `agents.graph.run_graph()`.
+> - **Bug found during Phase 11's rehearsal (item 5, scenario preview) and fixed here, in its owning phase:** Step 3's confirmation form built `current_savings` via `current_savings or None` - the same collapsing-to-`None` idiom used for `monthly_income` (there, deliberately, since it also drives the "required inputs" gate). For `current_savings`, which gates nothing, this meant a user who left the field at its widget default of `$0` (or deliberately typed `0` - a real, common answer for someone with no savings) had that answer silently discarded and replaced with `None` ("unknown"), which in turn made `snapshot.metrics.emergency_fund_months` come back `None` instead of the correct `0.0`. Exactly the "a real zero must not become `None`" failure mode the Standing Context's coding standards warn about, just in the opposite direction from the usual one. Fixed by passing `current_savings` through unchanged. Full suite re-run clean (337/337) and the fix directly verified (`emergency_fund_months` now reports `0.0`, not `None`, for a $0-savings profile) before the Phase 11 rehearsal - which had caught this - was restarted from its first step.
 
 ---
 
@@ -374,14 +384,25 @@ This phase exists because expected outputs cannot be authored earlier: the expec
 - Fill any test gaps found while doing this. Do not add features in this phase.
 
 **Exit gate — all must pass**
-- [ ] All eleven edge-case paths run without error or crash
-- [ ] All five property-based tests pass over at least 200 generated profiles each
-- [ ] Golden tests from Phase 6 still pass
-- [ ] No regressions in Phases 0–8 gate items (spot re-check)
-- [ ] Full test suite green in CI
-- [ ] Tagged `phase9-done`
+- [x] All eleven edge-case paths run without error or crash — `tests/test_edge_cases.py`, each run through the real `agents.graph.run_graph()` pipeline (not an isolated function call) wherever that was meaningful; case 11 (corrupted `SpecialistResult`) exercised through the full graph's node functions directly, in addition to Phase 4's existing narrower unit test
+- [x] All five property-based tests pass over at least 200 generated profiles each — `tests/test_properties.py`, 200 examples each in the checked-in suite; additionally stress-run at 1,000 examples each in this session with zero failures before trusting them
+- [x] Golden tests from Phase 6 still pass
+- [x] No regressions in Phases 0–8 gate items (spot re-check) — full suite green (337/337); Phase 8's `AppTest`-driven smoke path and Phase 3's allocation-ledger invariant were re-run explicitly, not just inferred from the aggregate count
+- [ ] Full test suite green in CI — **caveat:** 337/337 pass locally via `pytest`; no CI pipeline (`.github/workflows/`) exists in this repo, so "in CI" remains unverifiable as literally stated (same caveat as every prior phase)
+- [ ] Tagged `phase9-done` — pending explicit request; not performed unilaterally
 
----
+> No property or edge-case failure required a code fix in this phase - all
+> five properties held at both 200 and 1,000 examples on the first run, and
+> all eleven edge cases passed on the first run. This is not a coincidence:
+> Phases 6 and 8's manual-review passes already found and fixed three real
+> bugs (`_build_trend()`'s percent-change sign, `_category_trend_findings()`'s
+> essential-category mislabeling, and `build_roadmap()`'s underfunded-goal
+> severity) in the exact code these properties exercise most heavily
+> (trends, the allocation waterfall). Per the Phase 9 execution prompt's own
+> warning, no generator was narrowed and no assertion was relaxed to
+> reach this result - the generators cover the stated "full legal input
+> space" (zero/negative-adjacent boundary values, 0-4 debts, 0-3 goals,
+> 0-6 months of transaction history) without post-hoc restriction.
 
 ## Phase 10 — UX & Narrative Polish
 
@@ -392,9 +413,14 @@ This phase exists because expected outputs cannot be authored earlier: the expec
 - **De-scope trigger:** if time is tight, drop PDF-parsing improvements and LLM narrative polish first — never category review, the health snapshot, the deterministic roadmap, the consistency validator, golden tests, or CSV/Markdown downloads.
 
 **Exit gate**
-- [ ] Review, roadmap, Coach Summary, and export screens are demo-ready
-- [ ] Golden tests and full suite still pass
-- [ ] Tagged `phase10-done`
+- [x] Review, roadmap, Coach Summary, and export screens are demo-ready — all changes confined to `app.py`'s live-UI rendering, never `utils/reporting.py` (Phase 7's downloadable report already has its own frozen formatting and its own tests):
+  - Category review: the correction column is now a constrained `SelectboxColumn` over the real category set (`ingestion.CATEGORY_KEYWORDS` + Income/Other) instead of free text, and description/amount are read-only display columns
+  - Overview/Coach Summary: `top_priorities`/`critical_risks`/`important_patterns`/`positive_changes` now render each ID's already-computed title/category/metric label (e.g. "Fund goal: Vacation" instead of `ACTION_FUND_GOAL_VACATION`) via a pure ID→label lookup built from this run's own findings/risks/trends/roadmap — no new label is invented and no finding/risk/trend/action field changes
+  - Overview: `snapshot.data_quality_flags` now surfaces as its own callout above the Coach Summary, not only buried in `assumptions_and_limitations`'s caption text, per this phase's own "clarity about data limitations" guidance
+  - Roadmap: each action gets a severity icon (🔴/🟠/🟡/⚪/🟢); the underlying `severity`/`priority`/`monthly_amount` values are untouched
+  - Scenario preview table and tracker CSV: column/row labels renamed to human-readable text at the display/export call site only, never inside `utils.scenarios`/`utils.reporting`'s own return values
+- [x] Golden tests and full suite still pass — 337/337, byte-for-byte the same count and result as before this phase; confirms no behavior changed, only presentation
+- [ ] Tagged `phase10-done` — pending explicit request; not performed unilaterally
 
 ---
 
@@ -403,18 +429,25 @@ This phase exists because expected outputs cannot be authored earlier: the expec
 **Entry criterion:** Phase 10 marked done.
 
 **Tasks / final gate — run this exact checklist twice, live, without manual code edits between runs**
-- [ ] **1.** Load sample transactions
-- [ ] **2.** Confirm an unknown category can be changed before analysis
-- [ ] **3.** Enter a debt, a goal, and a minimum buffer
-- [ ] **4.** Run health calculation; score and risks are plausible and explained
-- [ ] **5.** Change an assumption; the scenario changes without corrupting the base result
-- [ ] **6.** Download report and tracker; exported totals match the rendered plan
-- [ ] **7.** Repeat the full journey in offline mode with no OpenRouter key
-- [ ] **8.** Confirm the Debt Analyzer, Goal Planner, and Savings Strategist tabs quote the exact same dollar figures as `roadmap.allocation`, and that those sum to no more than `allocatable_surplus`
-- [ ] **9.** Load the negative-cashflow golden fixture; verify no specialist proposes a positive extra-payment or investment, and the roadmap reads as a cashflow-recovery plan
-- [ ] **10.** Load the income-drop-plus-rising-dining golden fixture; verify the Coach Summary ranks the income drop as critical/immediate and cites the right `Finding`/`Trend` IDs
-- [ ] **11.** Confirm the Overview shows one coherent Coach Summary, not five concatenated specialist blocks
-- [ ] **12.** Confirm a data-quality-limited fixture discloses its limitation in the Coach Summary
-- [ ] **13.** `pytest` green: contracts, unit, golden, and property-based suites all pass
 
-**MVP 1 is "done" only when this gate is fully green.** At that point — and only then — MVP 2 may begin.
+> **Tooling note, recorded honestly rather than glossed over:** `streamlit.testing.v1.AppTest` (this Streamlit version) has no query interface for `st.data_editor`/`st.form_submit_button`. Steps that the checklist implies happen through one of those widgets (editing a category, editing the debts/goals tables, submitting the scenario-preview form) were driven by calling the exact function that widget's callback calls (`utils.ingestion.apply_category_corrections`, `utils.scenarios.apply_assumptions`/`compare_scenarios`) with the same inputs a user's edit would produce, rather than the widget itself. Steps 9-10 load a golden fixture's pre-built `FinancialProfile` directly through the same pipeline `app.py` calls, since the app's only load path is a raw CSV upload (date/description/amount), not a full profile JSON — there is no UI control this checklist could exercise for "load this exact fixture" beyond re-entering its numbers by hand. Steps 1, 3 (buffer), 4, 5 (base-result-unchanged check), 6, 7, 11, and 13 were driven through the real running app.
+>
+> **A bug was found and fixed during the first rehearsal attempt (not this recorded one) — the rehearsal was restarted from step 1 afterward, per this phase's own rule that a run requiring a fix is a failed run.** Step 5 (changing an assumption) surfaced that `app.py`'s Step 3 form built `current_savings` via `current_savings or None`, silently discarding a deliberate (or default/untouched) `$0` answer and turning `snapshot.metrics.emergency_fund_months` into `None` instead of the correct `0.0`. Fixed in `app.py` (Phase 8, its owning phase — see that phase's caveats), Phase 8's gate re-verified (full suite green, fix directly confirmed), and only then was this rehearsal restarted clean. Two fully independent, back-to-back runs both passed 13/13 with identical results, confirming the pipeline's determinism as a side effect.
+
+- [x] **1.** Load sample transactions — loaded via the sidebar button through the real app; reached Step 2/Step 3 with no exception
+- [x] **2.** Confirm an unknown category can be changed before analysis — the bundled sample data itself has zero unmatched categories (a real observation, not assumed away); demonstrated instead with a synthetic unmatched transaction ("Other" → corrected to "Dining") through `apply_category_corrections()`, the exact function the review screen's data_editor calls
+- [x] **3.** Enter a debt, a goal, and a minimum buffer — buffer set to $250 through the real widget; Step 3's default debt/goal rows (present without further edits) carried through, an observation worth recording as-is rather than silently treating "left at default" the same as "user-entered"
+- [x] **4.** Run health calculation; score and risks are plausible and explained — health score 70/100 ("Building"), risks `RISK_INSUFFICIENT_EMERGENCY_FUND` and `RISK_HIGH_INTEREST_DEBT` given a $0-savings, one-high-APR-debt profile — plausible and consistent with the numbers
+- [x] **5.** Change an assumption; the scenario changes without corrupting the base result — `minimum_monthly_buffer` +$500 moved `allocatable_surplus` by exactly -$500 in the preview; `st.session_state["graph_result"]` was confirmed to be the *same object* (identity-checked, not just equal) after previewing, proving the base analysis was never touched
+- [x] **6.** Download report and tracker; exported totals match the rendered plan — tracker row total and `roadmap.allocation`'s distributed total matched to the cent ($2,225.38 both)
+- [x] **7.** Repeat the full journey in offline mode with no OpenRouter key — `is_live()` asserted `False` (no `OPENROUTER_API_KEY` set), not assumed; the entire rehearsal ran under this condition throughout
+- [x] **8.** Confirm the Debt Analyzer, Goal Planner, and Savings Strategist tabs quote the exact same dollar figures as `roadmap.allocation`, and that those sum to no more than `allocatable_surplus` — matched exactly; both goals happened to receive $0 in this profile (buffer + debt acceleration exhausted the ledger first, a real and correctly-handled outcome, not a bug — see note below)
+- [x] **9.** Load the negative-cashflow golden fixture; verify no specialist proposes a positive extra-payment or investment, and the roadmap reads as a cashflow-recovery plan — all distributed amounts $0, zero actions, `RISK_NEGATIVE_CASHFLOW` present
+- [x] **10.** Load the income-drop-plus-rising-dining golden fixture; verify the Coach Summary ranks the income drop as critical/immediate and cites the right `Finding`/`Trend` IDs — `FINDING_INCOME_DROP` is `severity=critical`, `urgency=immediate`, cited in `coach_summary.important_patterns`, and references `TREND_INCOME`
+- [x] **11.** Confirm the Overview shows one coherent Coach Summary, not five concatenated specialist blocks — confirmed; none of the four specialists' raw narratives appear on the Overview screen
+- [x] **12.** Confirm a data-quality-limited fixture discloses its limitation in the Coach Summary — `PARTIAL_TRAILING_MONTH` disclosed both in `coach_summary.assumptions_and_limitations` and in the Phase 10 data-quality callout on the Overview screen
+- [x] **13.** `pytest` green: contracts, unit, golden, and property-based suites all pass — 337 passed, 4 skipped, both runs
+
+> **Observation worth recording rather than silently passing over (per this phase's "a step that worked but looked odd is a finding, not a pass"):** in step 8's profile, both goals received exactly $0 — the starter emergency buffer and high-interest-debt acceleration steps (each claiming a documented 50% share) exhausted the entire ledger before goal-funding's turn in the waterfall. This is the deterministic allocator behaving exactly as designed (buffer and debt genuinely do outrank these goals given this profile's numbers), not a defect — but it is a real example of how thoroughly a genuinely-tight surplus can starve every lower-priority goal, worth keeping in mind for any future prioritization/partial-funding discussion in MVP 2.
+
+**MVP 1 is "done" only when this gate is fully green.** All thirteen checks passed on two consecutive, independent, clean runs with identical results and no code edits between them. **MVP 1 is complete.** PR-merge and `phase11-done`/final release tagging are pending explicit user request, as with every prior phase's tag — not performed unilaterally. MVP 2 work may begin only once that tagging is confirmed, per this document's own rule.

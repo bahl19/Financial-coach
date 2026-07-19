@@ -174,9 +174,28 @@ def build_roadmap(
         if amount <= 0:
             continue
         goal_contributions[goal["name"]] = amount
+        # feasibility["feasible"] was computed against ledger.remaining - the
+        # surplus genuinely still available at this point in the waterfall -
+        # so it is the authoritative answer to "does this goal's contribution
+        # cover its required_monthly?", unlike snapshot.goal_results (a
+        # preliminary, allocation-unaware check against the *full*
+        # allocatable_surplus, run before this waterfall and before any
+        # higher-priority step or earlier goal has claimed its share). A goal
+        # can pass that preliminary check yet still be underfunded here.
+        # Elevate the action itself when that happens so the shortfall is
+        # visible in the roadmap/coach summary, not only inside this one
+        # goal's own specialist narrative.
+        underfunded = not feasibility["feasible"]
         actions.append(_action(
-            f"ACTION_FUND_GOAL_{_slug(goal['name'])}", 0, "medium", "next_90_days", "Next 90 days",
-            f"Fund goal: {goal['name']}", f"Contributing toward {goal['name']} at the required monthly pace.",
+            f"ACTION_FUND_GOAL_{_slug(goal['name'])}", 0,
+            "high" if underfunded else "medium",
+            "this_month" if underfunded else "next_90_days",
+            "This month" if underfunded else "Next 90 days",
+            f"Fund goal: {goal['name']}",
+            (
+                f"Contributing ${amount:,.0f}/month toward {goal['name']}, short of the "
+                f"${feasibility['required_monthly']:,.0f}/month required to stay on track."
+            ) if underfunded else f"Contributing toward {goal['name']} at the required monthly pace.",
             amount, ["allocatable_surplus"], [], _risk_ids_of_category(risks, "goals"),
         ))
 

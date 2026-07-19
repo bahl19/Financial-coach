@@ -145,6 +145,40 @@ def test_build_roadmap_is_deterministic_for_the_same_input():
 
 
 # --------------------------------------------------------------------------
+# Bug found during Phase 6 golden-fixture manual review: a goal could clear
+# snapshot.goal_results' preliminary, allocation-unaware feasibility check
+# (run before this waterfall, against the *full* allocatable_surplus) and
+# still end up genuinely underfunded here once buffer/debt/earlier-priority
+# goals claim their share first - build_roadmap() already computed the real,
+# allocation-aware feasibility at that point but discarded it, so the action
+# itself never reflected the shortfall (only the goal specialist's own prose
+# narrative did). See income_drop_rising_dining: "New laptop" needs
+# $400/month but only $377.17 remains once the starter buffer takes its 50%
+# share first.
+# --------------------------------------------------------------------------
+
+def test_underfunded_goal_action_is_elevated_to_high_severity_this_month():
+    profile = _load(GOLDEN_DIR / "income_drop_rising_dining.input.json")
+    _, _, _, _, roadmap = _run_pipeline(profile)
+    action = next(a for a in roadmap["actions"] if a["action_id"] == "ACTION_FUND_GOAL_NEW_LAPTOP")
+    assert action["severity"] == "high"
+    assert action["urgency"] == "this_month"
+    assert "short of the $400" in action["rationale"]
+    # amount actually allocated is still exactly what the ledger had left,
+    # not the goal's full requirement - elevation must not change the amount.
+    assert roadmap["allocation"]["goal_contributions"]["New laptop"] == pytest.approx(377.16666666666674)
+
+
+def test_fully_funded_goal_action_keeps_medium_severity_next_90_days():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    _, _, _, _, roadmap = _run_pipeline(profile)
+    action = next(a for a in roadmap["actions"] if a["action_id"].startswith("ACTION_FUND_GOAL_"))
+    assert action["severity"] == "medium"
+    assert action["urgency"] == "next_90_days"
+    assert "short of" not in action["rationale"]
+
+
+# --------------------------------------------------------------------------
 # Gate: "The negative-cashflow golden input produces a roadmap where
 # debt_extra_payment, savings_contribution, and every goal_contributions
 # entry are 0"

@@ -86,6 +86,71 @@ def test_emergency_fund_runway_trend_compares_actual_to_target_not_time():
     assert runway["end_value"] == pytest.approx(snapshot["metrics"]["emergency_fund_months"])
 
 
+def test_percent_change_sign_matches_direction_even_with_a_negative_baseline():
+    """Regression test for a bug found during Phase 6's manual golden-
+    fixture review (not by a failing test): negative_cashflow.input.json's
+    monthly net cashflow moves from -675 (March) to -500 (May) - a genuine
+    improvement (deficit shrinking) - but the old formula
+    (absolute_change / signed start_value) reported percent_change as
+    -25.9% and classified it "moderate_decrease", directly contradicting
+    direction="increasing". Divides by abs(start_value) instead, so
+    percent_change's sign always agrees with direction's sign, regardless
+    of whether the baseline itself was negative."""
+    trend = fc._build_trend("TEST_TREND", "test_metric", "3_months", start_value=-675.0, end_value=-500.0)
+    assert trend["direction"] == "increasing"
+    assert trend["percent_change"] > 0, "percent_change must agree in sign with an improving (increasing) direction"
+    assert trend["classification"] in ("moderate_increase", "sharp_increase")
+
+
+def test_sharp_decrease_in_an_essential_category_is_not_labeled_positive():
+    """Regression test for a bug found during Phase 6's manual golden-
+    fixture review: a sharp decrease in Healthcare spend (negative_cashflow's
+    fixture drops from $260 to $0) was labeled severity="positive" with
+    "Keep up the trend" - actively bad advice, since a healthcare spending
+    drop could mean skipped care, not disciplined saving. Essential/needs
+    categories (Rent/Mortgage, Groceries, Utilities, Insurance, Healthcare,
+    Transport, Debt Payment - fc.NEEDS_CATS) must not receive the same
+    unconditional "positive" label a discretionary category's decrease does."""
+    profile = _load(GOLDEN_DIR / "negative_cashflow.input.json")
+    _, trends, findings, _ = _run_pipeline(profile)
+    healthcare_finding = next(f for f in findings if f["finding_id"] == "FINDING_CATEGORY_HEALTHCARE_CHANGE")
+    assert healthcare_finding["severity"] != "positive"
+    assert "skipped" in healthcare_finding["recommended_response"].lower() or "intentional" in healthcare_finding["recommended_response"].lower()
+
+
+def test_sharp_decrease_in_a_discretionary_category_is_still_labeled_positive():
+    """The other half of the fix: a genuinely discretionary category (Dining
+    Out is not in NEEDS_CATS) dropping sharply should still read as good
+    news - the fix narrows the "positive" label, it doesn't remove it."""
+    df_rows = [
+        {"date": "2026-03-01", "description": "x", "amount": 5000.0, "category": "Income", "category_confidence": 1.0, "needs_review": False, "transaction_type": "income"},
+        {"date": "2026-03-05", "description": "x", "amount": -400.0, "category": "Dining", "category_confidence": 1.0, "needs_review": False, "transaction_type": "expense"},
+        {"date": "2026-04-01", "description": "x", "amount": 5000.0, "category": "Income", "category_confidence": 1.0, "needs_review": False, "transaction_type": "income"},
+        {"date": "2026-04-05", "description": "x", "amount": -50.0, "category": "Dining", "category_confidence": 1.0, "needs_review": False, "transaction_type": "expense"},
+    ]
+    df = fc._transactions_to_frame(df_rows)
+    snapshot = fc.calculate_financial_snapshot({
+        "transactions": df_rows, "monthly_income": 5000.0, "current_savings": 0.0, "debts": [], "goals": [],
+        "constraints": {"minimum_monthly_buffer": 0.0, "protected_categories": []},
+        "assumptions": {"currency": "USD", "needs_ratio": 0.5, "wants_ratio": 0.3, "savings_ratio": 0.2, "savings_apy": 0.04, "emergency_fund_months": 3},
+    })
+    trends = fc.compute_trends({"transactions": df_rows, "assumptions": {"emergency_fund_months": 3}}, snapshot)
+    findings = fc.derive_findings(snapshot, trends)
+    dining_finding = next((f for f in findings if f["finding_id"] == "FINDING_CATEGORY_DINING_CHANGE"), None)
+    assert dining_finding is not None
+    assert dining_finding["severity"] == "positive"
+
+
+def test_negative_cashflow_golden_fixture_surplus_trend_agrees_with_itself():
+    """The concrete real-world instance of the regression above."""
+    profile = _load(GOLDEN_DIR / "negative_cashflow.input.json")
+    _, trends, _, _ = _run_pipeline(profile)
+    surplus_trend = next(t for t in trends if t["trend_id"] == "TREND_SURPLUS")
+    if surplus_trend["direction"] == "increasing":
+        assert surplus_trend["percent_change"] > 0
+        assert surplus_trend["classification"] in ("stable", "moderate_increase", "sharp_increase")
+
+
 def test_all_six_trend_types_are_exercised_across_the_committed_fixtures():
     """No single fixture need cover every trend type, but across the
     committed set, all 6 must be demonstrated at least once."""
