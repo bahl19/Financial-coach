@@ -90,3 +90,16 @@ def test_current_user_label_none_when_not_logged_in(monkeypatch):
     monkeypatch.setattr(st, "secrets", {"auth": {"client_id": "x"}})
     monkeypatch.setattr(st, "user", _FakeUser(is_logged_in=False))
     assert authn.current_user_label() is None
+
+
+def test_authlib_is_actually_installed_not_just_declared():
+    """`st.login()` raises `StreamlitMissingAuthlibError` when Authlib is
+    absent - and that failure surfaces only when a user actually clicks
+    Sign in, long after `auth_enabled()` has already reported True, so the
+    app looks configured right up until the moment it isn't.
+    `requirements.txt` declares `Authlib>=1.3.2`; this asserts the running
+    environment genuinely has it, which is what a stale virtualenv (or a
+    deploy that installed before that line was added) silently would not."""
+    import authlib
+
+    assert authlib.__version__

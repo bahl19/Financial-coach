@@ -13,12 +13,30 @@ directly, which is what actually produces the output in question.
 """
 
 import pandas as pd
+import pytest
 from streamlit.testing.v1 import AppTest
 
 from agents import graph as g
 from agents.orchestrator import build_chat_reply
+from utils import auth as authn
 from utils import finance_calc as fc
 from utils import ingestion, landing
+
+
+@pytest.fixture(autouse=True)
+def _auth_disabled_unless_a_test_says_otherwise(monkeypatch):
+    """Pin sign-in to "not configured" for every test in this module.
+
+    Without this, the whole file's result depends on whether the developer
+    running it happens to have a local `.streamlit/secrets.toml` - with one
+    present, `auth_enabled()` reads True, every `_launch()` lands on the
+    sign-in gate instead of the app, and a dozen tests that have nothing to
+    do with authentication fail for an environmental reason. Configuring
+    sign-in locally is a normal thing to do, so it must not turn the suite
+    red. Tests that exercise the authenticated path monkeypatch
+    `auth_enabled` back on in their own body, which runs after this fixture
+    and therefore wins."""
+    monkeypatch.setattr(authn, "auth_enabled", lambda: False)
 
 
 def _launch(**kwargs) -> AppTest:
@@ -328,9 +346,21 @@ def test_cut_discretionary_spending_scenario_actually_changes_the_comparison():
 # asserts the *disabled* case implicitly by running the full flow unchanged.
 # --------------------------------------------------------------------------
 
-def test_auth_disabled_by_default_leaves_the_existing_app_unaffected():
-    from utils import auth as authn
-    assert authn.auth_enabled() is False, "no .streamlit/secrets.toml is committed; this must stay the default in CI"
+def test_repository_never_ships_a_secrets_file():
+    """The invariant that actually matters, and the one the autouse fixture
+    above cannot assert for itself: a developer may keep a local, gitignored
+    `.streamlit/secrets.toml` to exercise sign-in, but it must never be
+    committed - that is what keeps CI and a fresh clone running with auth
+    disabled, and what keeps a real client secret out of a public repo.
+    Asserted against git's own index rather than the filesystem, since the
+    file existing locally is expected and fine."""
+    import subprocess
+
+    tracked = subprocess.run(
+        ["git", "ls-files", ".streamlit/"], capture_output=True, text=True, check=True,
+    ).stdout.split()
+    assert ".streamlit/secrets.toml" not in tracked, "a real secrets file has been staged/committed - remove it"
+    assert ".streamlit/secrets.toml.example" in tracked, "the template must stay committed"
 
 
 def test_signed_out_user_sees_login_screen_and_nothing_else_when_auth_enabled(monkeypatch):

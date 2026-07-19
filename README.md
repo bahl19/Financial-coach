@@ -48,7 +48,13 @@ OPENROUTER_MODEL=anthropic/claude-sonnet-4.5
 No key? The app still runs fully offline with rule-based fallback narratives.
 
 ### 3b. (Optional) Enable sign-in
-The app works with no login by default. To require sign-in (via [Logto](https://logto.io)), copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and fill in `client_secret` (create a long-lived one in the Logto console) and `cookie_secret` (any random string). Leave the file absent, or without an `[auth]` section, to keep sign-in disabled.
+The journey is **landing page → sign-in → app**. The sign-in step is skipped unless it is configured, so the app runs out of the box with no credentials.
+
+To require sign-in (via [Logto](https://logto.io)): copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` (gitignored) and fill in `client_secret` (create a long-lived one in the Logto console) and `cookie_secret` (any random string). Keep the `client_kwargs = { prompt = "login" }` line — Streamlit otherwise sends `prompt=select_account`, which Logto rejects, and the Sign in button silently bounces back to the app.
+
+Sign-in needs Authlib (`Authlib>=1.3.2`, already in `requirements.txt`). If you have an older virtualenv, `pip install -r requirements.txt` again — without it, `st.login()` raises at click time even though everything else looks configured.
+
+Leave the file absent, or without an `[auth]` section, to keep sign-in disabled.
 
 ### 4. Run the app
 ```bash
