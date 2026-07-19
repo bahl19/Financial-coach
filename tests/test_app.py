@@ -18,11 +18,25 @@ from streamlit.testing.v1 import AppTest
 from agents import graph as g
 from agents.orchestrator import build_chat_reply
 from utils import finance_calc as fc
-from utils import ingestion
+from utils import ingestion, landing
+
+
+def _launch(**kwargs) -> AppTest:
+    """Start the app and click past the landing page - the first screen a
+    real visitor now sees (`utils/landing.py`), gated ahead of sign-in and
+    the app itself. Tests asserting on the landing page use
+    `AppTest.from_file` directly instead."""
+    at = AppTest.from_file("app.py", default_timeout=30, **kwargs)
+    at.run()
+    # An already-signed-in visitor skips the landing page by design, so the
+    # CTA only exists on signed-out (or auth-disabled) runs.
+    if any(b.key == landing.CTA_KEY for b in at.button):
+        at.button(key=landing.CTA_KEY).click().run()
+    return at
 
 
 def _load_sample_and_analyze(at: AppTest, monthly_income: float = 75000.0) -> AppTest:
-    at.run()
+    """Assumes `at` is already past the landing page (see `_launch`)."""
     at.sidebar.button(key="load_sample_button").click().run()
     at.number_input(key="monthly_income_input").set_value(monthly_income).run()
     at.button(key="analyze_button").click().run()
@@ -37,7 +51,7 @@ def test_full_sample_path_works_offline_with_no_exception():
     from utils.llm import is_live
     assert not is_live(), "this test asserts the offline path; an OPENROUTER_API_KEY is set in this environment"
 
-    at = AppTest.from_file("app.py", default_timeout=30)
+    at = _launch()
     _load_sample_and_analyze(at)
     assert not at.exception
     # 7 analysis tabs (Overview..Chat) + 5 Scenario Comparison sub-tabs -
@@ -62,8 +76,7 @@ def test_full_sample_path_works_offline_with_no_exception():
 # --------------------------------------------------------------------------
 
 def test_analyze_button_disabled_until_monthly_income_is_set():
-    at = AppTest.from_file("app.py", default_timeout=30)
-    at.run()
+    at = _launch()
     at.sidebar.button(key="load_sample_button").click().run()
     assert not at.exception
     # The bundled sample data has income transactions, so Step 3's income
@@ -81,8 +94,7 @@ def test_analyze_button_disabled_until_monthly_income_is_set():
 
 
 def test_analyze_button_enables_once_income_is_confirmed_and_analysis_runs():
-    at = AppTest.from_file("app.py", default_timeout=30)
-    at.run()
+    at = _launch()
     at.sidebar.button(key="load_sample_button").click().run()
     at.number_input(key="monthly_income_input").set_value(75000.0).run()
     assert not at.button(key="analyze_button").disabled
@@ -96,8 +108,7 @@ def test_monthly_income_is_prefilled_from_the_most_recent_income_transaction():
     ask the user to type a number from scratch that could silently disagree
     with the just-uploaded statement. It now suggests the most recent
     Income-category transaction's amount as a starting point instead."""
-    at = AppTest.from_file("app.py", default_timeout=30)
-    at.run()
+    at = _launch()
     at.sidebar.button(key="load_sample_button").click().run()
     assert not at.exception
     assert at.number_input(key="monthly_income_input").value == 75000.0
@@ -139,7 +150,7 @@ def test_editing_a_review_category_changes_spending_by_category_output():
 # --------------------------------------------------------------------------
 
 def test_currency_selector_changes_the_rendered_money_symbol():
-    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    at = _load_sample_and_analyze(_launch())
     assert not at.exception
     overview_metrics = {m.label: m.value for m in at.metric}
     assert overview_metrics["Gross surplus"].startswith("₹")  # default currency is INR
@@ -156,8 +167,7 @@ def test_currency_selector_changes_the_rendered_money_symbol():
 
 
 def test_region_selector_changes_categorization_of_india_vendor_transactions():
-    at = AppTest.from_file("app.py", default_timeout=30)
-    at.run()
+    at = _launch()
     at.sidebar.button(key="load_sample_button").click().run()
     assert not at.exception
 
@@ -184,7 +194,7 @@ def test_region_selector_changes_categorization_of_india_vendor_transactions():
 # --------------------------------------------------------------------------
 
 def test_download_buttons_present_and_enabled_offline():
-    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    at = _load_sample_and_analyze(_launch())
     assert not at.exception
     labels = [d.label for d in at.download_button]
     assert "\U0001f4c4 Download report (Markdown)" in labels
@@ -199,7 +209,7 @@ def test_download_buttons_present_and_enabled_offline():
 # --------------------------------------------------------------------------
 
 def test_specialist_tabs_render_real_content_from_the_graph_result():
-    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    at = _load_sample_and_analyze(_launch())
     spending_md = "\n".join(m.value for m in at.tabs[1].markdown)
     debt_md = "\n".join(m.value for m in at.tabs[2].markdown)
     savings_md = "\n".join(m.value for m in at.tabs[3].markdown)
@@ -212,7 +222,7 @@ def test_chat_reply_is_byte_identical_to_the_matched_specialist_narrative():
     query must return the *same* narrative object the Debt Payoff tab
     already rendered from this run's one `run_graph()` call, not a second
     LLM/agent invocation."""
-    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    at = _load_sample_and_analyze(_launch())
     graph_result = at.session_state["graph_result"]
 
     at.chat_input[0].set_value("Should I pay off my credit card debt?").run()
@@ -258,7 +268,7 @@ def test_build_chat_reply_reuses_graph_result_narratives_directly():
 # --------------------------------------------------------------------------
 
 def test_overview_tab_renders_coach_summary_not_raw_specialist_narratives():
-    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    at = _load_sample_and_analyze(_launch())
     graph_result = at.session_state["graph_result"]
     overview_md = "\n".join(m.value for m in at.tabs[0].markdown)
 
@@ -273,7 +283,7 @@ def test_overview_tab_renders_coach_summary_not_raw_specialist_narratives():
 # --------------------------------------------------------------------------
 
 def test_validator_fallback_is_surfaced_as_a_warning():
-    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    at = _load_sample_and_analyze(_launch())
     assert not any(at.warning)  # no fallback in the ordinary offline run
 
     at.session_state["graph_result"]["validation_result"]["fallback_used"] = True
@@ -292,7 +302,7 @@ def test_validator_fallback_is_surfaced_as_a_warning():
 # --------------------------------------------------------------------------
 
 def test_cut_discretionary_spending_scenario_actually_changes_the_comparison():
-    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    at = _load_sample_and_analyze(_launch())
     assert not at.exception
     assert at.session_state["pipeline_inputs"][0].get("confirmed_monthly_expenses") is not None  # the shadowing precondition
 
@@ -329,8 +339,7 @@ def test_signed_out_user_sees_login_screen_and_nothing_else_when_auth_enabled(mo
     monkeypatch.setattr(authn, "auth_enabled", lambda: True)
     monkeypatch.setattr(authn, "is_logged_in", lambda: False)
 
-    at = AppTest.from_file("app.py", default_timeout=30)
-    at.run()
+    at = _launch()
 
     assert not at.exception
     assert any("Sign in" in b.label for b in at.button)
@@ -347,6 +356,73 @@ def test_signed_in_user_reaches_the_ordinary_app_when_auth_enabled(monkeypatch):
     monkeypatch.setattr(authn, "is_logged_in", lambda: True)
     monkeypatch.setattr(authn, "current_user_label", lambda: "test@example.com")
 
-    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    at = _load_sample_and_analyze(_launch())
     assert not at.exception
     assert any("test@example.com" in c.value for c in at.sidebar.caption)
+
+
+# --------------------------------------------------------------------------
+# Landing page -> sign-in -> app. The landing page previously existed only as
+# an unserved static file in UI/ whose CTAs linked out to the deployed URL;
+# these tests pin that it is now the app's actual first screen and that each
+# stage genuinely blocks the next.
+# --------------------------------------------------------------------------
+
+def test_landing_page_is_the_first_screen_and_gates_the_app():
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+
+    assert not at.exception
+    assert any(b.key == landing.CTA_KEY for b in at.button)
+    # Nothing past the gate rendered: no sidebar upload/sample controls, no
+    # Step 2 categorization, no analysis tabs.
+    assert not any(b.key == "load_sample_button" for b in at.sidebar.button)
+    assert not any("Step 2" in h.value for h in at.header)
+    assert len(at.tabs) == 0
+
+
+def test_landing_cta_advances_into_the_app_when_auth_is_disabled():
+    """With no [auth] section configured (the repo default and CI's state),
+    the sign-in stage is skipped and the CTA leads straight to the app."""
+    from utils import auth as authn
+    assert authn.auth_enabled() is False
+
+    at = _launch()
+    assert not at.exception
+    assert any(b.key == "load_sample_button" for b in at.sidebar.button)
+
+
+def test_landing_cta_advances_into_sign_in_when_auth_is_enabled(monkeypatch):
+    """The full requested journey: landing first, Logto sign-in second, and
+    the app only after authentication."""
+    from utils import auth as authn
+
+    monkeypatch.setattr(authn, "auth_enabled", lambda: True)
+    monkeypatch.setattr(authn, "is_logged_in", lambda: False)
+
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+    assert any(b.key == landing.CTA_KEY for b in at.button)
+    assert not any("Sign in" in b.label for b in at.button)  # sign-in not shown yet
+
+    at.button(key=landing.CTA_KEY).click().run()
+    assert not at.exception
+    assert any("Sign in" in b.label for b in at.button)
+    # Still gated: authentication has not happened, so the app must not render.
+    assert not any(b.key == "load_sample_button" for b in at.sidebar.button)
+
+
+def test_signed_in_visitor_skips_the_landing_page(monkeypatch):
+    """The landing page is a first-visit marketing screen, not something to
+    re-read on every rerun once authenticated."""
+    from utils import auth as authn
+
+    monkeypatch.setattr(authn, "auth_enabled", lambda: True)
+    monkeypatch.setattr(authn, "is_logged_in", lambda: True)
+    monkeypatch.setattr(authn, "current_user_label", lambda: "test@example.com")
+
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+    assert not at.exception
+    assert not any(b.key == landing.CTA_KEY for b in at.button)
+    assert any(b.key == "load_sample_button" for b in at.sidebar.button)

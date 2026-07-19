@@ -103,4 +103,12 @@ def render_signed_in_sidebar_control() -> None:
     with st.sidebar:
         st.caption(f"Signed in as {current_user_label()}")
         if st.button("Sign out", key="auth_sign_out_button"):
+            # Send them back to the landing page, so a signed-out visitor
+            # sees what a first-time visitor sees rather than being dropped
+            # straight onto the sign-in gate with no context. Imported here,
+            # not at module scope, to keep the auth <-> landing dependency
+            # one-directional and avoid a circular import.
+            from utils import landing
+
+            landing.reset()
             st.logout()

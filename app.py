@@ -28,7 +28,7 @@ load_dotenv()
 
 from agents import graph as g
 from agents.orchestrator import build_chat_reply
-from utils import app_state, ingestion, theme
+from utils import app_state, ingestion, landing, theme
 from utils import auth as authn
 from utils import finance_calc as fc
 from utils import region as rg
@@ -44,6 +44,23 @@ theme.render_theme_toggle()
 theme.inject_theme_css()
 theme.apply_plotly_template()
 
+# The one canonical entry journey: landing page -> Logto sign-in -> the app.
+# Each stage renders and then stops, so no gated content below ever executes
+# for a visitor who has not cleared it (Streamlit has no router/middleware to
+# enforce this centrally - the explicit st.stop() is the enforcement).
+#
+# An already-signed-in user skips the landing page: it is a first-visit
+# marketing screen, not something to re-read on every rerun. Signing out
+# calls landing.reset(), so a signed-out visitor lands where a new one does.
+if not landing.was_dismissed() and not authn.is_logged_in():
+    if landing.render_landing_page():
+        landing.dismiss()
+        st.rerun()
+    st.stop()
+
+# Stage 2. Skipped entirely when auth is not configured (no [auth] section in
+# .streamlit/secrets.toml) - the same "missing config disables the feature,
+# never crashes" rule utils/auth.py already follows for OPENROUTER_API_KEY.
 if authn.auth_enabled() and not authn.is_logged_in():
     authn.render_login_screen()
     st.stop()

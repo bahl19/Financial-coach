@@ -44,6 +44,7 @@ _ADAPTER_EXCEPTIONS = {
     "utils/app_state.py": {"streamlit"},
     "utils/auth.py": {"streamlit"},
     "utils/theme.py": {"streamlit"},
+    "utils/landing.py": {"streamlit"},
 }
 
 # Forbidden for every *other* file under utils/ and agents/.
