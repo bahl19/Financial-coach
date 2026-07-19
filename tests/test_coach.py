@@ -9,9 +9,8 @@ from pathlib import Path
 import pytest
 
 from agents import graph as g
-from utils import coach
+from utils import coach, ingestion
 from utils import finance_calc as fc
-from utils import ingestion
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = REPO_ROOT / "fixtures"
@@ -82,7 +81,6 @@ def test_top_priorities_actually_truncates_when_more_than_three_actions_exist():
     is never exercised as a real truncation. Adding extra goals here is the
     minimal way to prove the cap actually cuts something off, not just
     happens to never be hit."""
-    from utils import roadmap as rm
 
     profile = _load(FIXTURES_DIR / "mixed_urgency_actions.json")
     profile["goals"] = [

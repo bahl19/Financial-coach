@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from typing import List
 
-from utils.contracts import CoachSummary, Finding, FinancialSnapshot, Risk, Roadmap, Trend
+from utils.contracts import CoachSummary, FinancialSnapshot, Finding, Risk, Roadmap, Trend
 
 _MAX_TOP_PRIORITIES = 3
 
@@ -86,7 +86,7 @@ def _top_priorities(roadmap: Roadmap) -> List[str]:
 
 
 def _action_buckets(roadmap: Roadmap) -> dict:
-    buckets = {bucket: [] for bucket in _URGENCY_TO_BUCKET.values()}
+    buckets: dict = {bucket: [] for bucket in _URGENCY_TO_BUCKET.values()}
     for action in roadmap["actions"]:
         bucket = _URGENCY_TO_BUCKET.get(action["urgency"])
         if bucket is not None:

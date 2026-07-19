@@ -1,0 +1,36 @@
+{
+  "acceptance_timestamp_utc": "2026-07-19T08:22:17Z",
+  "accepted_commit_sha": "f13465284b88948e1c830e516e246c22dd582fdd",
+  "dependency_lock": {
+    "file": "requirements.txt",
+    "note": "This repository pins minimum versions in requirements.txt and has no separate lock file; requirements.txt's own hash is used as the dependency-lock proxy. Recorded as a deliberate deviation from the plan's literal 'lock hash' wording, per Implementation Plan - MVP 2.md section 2.3's instruction to record tooling deviations rather than silently omit them.",
+    "sha256": "6019c24060359211ca3a6ca9388be4b116e706099ced85a09e3d22237c28aa33"
+  },
+  "expected_test_results": {
+    "collected": 392,
+    "failed": 0,
+    "passed": 388,
+    "skipped": 4
+  },
+  "golden_fixtures": {
+    "income_drop_rising_dining": {
+      "expected_sha256": "5478e4afaff5049b6b6ffd287dfda9ecdb69ed1f4a5521088c7edf1171b471a8",
+      "input_sha256": "9fc96f5556418477b424e323d2321edfe4ccf366298ef7ce2dbc47b717de8f5d"
+    },
+    "negative_cashflow": {
+      "expected_sha256": "345910c9a5681f75d30efc7ef58b6cd37bd266ee496005484286574f39cad855",
+      "input_sha256": "682ae0903be4422471b1c5a99e961ff6e11a62b36c8aa68bb0a5d614ea831c12"
+    },
+    "stable_high_surplus": {
+      "expected_sha256": "8248937d5b88189aa3ea39d7a2ac996309a66fafee7f8c99d43f60f29dde137d",
+      "input_sha256": "1581507ced4eb9b8f467f02aa526b9c4f4af8074722fa9222cb7f54aa1aaf869"
+    }
+  },
+  "known_limitations": [
+    "Implementation Plan - MVP 1.md, Phase 6 exit gate: the negative_cashflow expected golden output was hand-verified (every metric/trend/finding/risk recomputed from raw transactions and cross-checked against the code) but never signed off by a literal second human reviewer - no second reviewer was available for this solo project. Disclosed here rather than silently treated as satisfied; does not block Phase 11's release gate, which the plan treats as the authoritative final gate for MVP 1 completeness.",
+    "Per-phase tags phase0-done through phase10-done were never created (each phase's own exit gate marks tagging as 'pending explicit request; not performed unilaterally'). Only phase11-done, the tag Phase MVP2-0's entry criterion actually requires, was created, on explicit user request, on this manifest's accepted_commit_sha."
+  ],
+  "mvp1_tag": "phase11-done",
+  "python_version": "Python 3.13.2",
+  "schema_version": "1.0"
+}

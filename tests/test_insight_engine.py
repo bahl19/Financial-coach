@@ -8,9 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from utils import contracts
+from utils import contracts, ingestion
 from utils import finance_calc as fc
-from utils import ingestion
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = REPO_ROOT / "fixtures"
@@ -128,7 +127,6 @@ def test_sharp_decrease_in_a_discretionary_category_is_still_labeled_positive():
         {"date": "2026-04-01", "description": "x", "amount": 5000.0, "category": "Income", "category_confidence": 1.0, "needs_review": False, "transaction_type": "income"},
         {"date": "2026-04-05", "description": "x", "amount": -50.0, "category": "Dining", "category_confidence": 1.0, "needs_review": False, "transaction_type": "expense"},
     ]
-    df = fc._transactions_to_frame(df_rows)
     snapshot = fc.calculate_financial_snapshot({
         "transactions": df_rows, "monthly_income": 5000.0, "current_savings": 0.0, "debts": [], "goals": [],
         "constraints": {"minimum_monthly_buffer": 0.0, "protected_categories": []},

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from utils.contracts import Finding, FinancialProfile, FinancialSnapshot, Risk, Roadmap
+from utils.contracts import FinancialProfile, FinancialSnapshot, Finding, Risk, Roadmap
 from utils.currency import format_money
 from utils.finance_calc import goal_feasibility
 from utils.llm import complete

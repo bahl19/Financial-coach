@@ -1,0 +1,63 @@
+name: CI
+
+# Implementation Plan - MVP 2.md, Phase MVP2-0, Task C: installs from
+# scratch, then runs lint, types, all offline tests (goldens and
+# dependency-boundary checks included - they're plain pytest files, not a
+# separate job), excluding only the `live_model` and `real_embedding`
+# markers (section 2.4: "Live OpenRouter and real-embedding tests use
+# explicit markers and never run in the default offline CI job"; section
+# 2.3: "Ensure default CI excludes only live_model and real_embedding; no
+# deterministic or UI test is excluded"). No live/release job exists yet -
+# Phase MVP2-3 introduces the first `live_model`-marked test and its own
+# secret-gated, request/token/dollar-capped job at that point, not before.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install from scratch
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: |
+          source .venv/bin/activate
+          python -m ruff check .
+
+      - name: Type check (mypy)
+        run: |
+          source .venv/bin/activate
+          python -m mypy utils agents
+          # `mvp2` is appended to this command starting with the first
+          # commit that adds mvp2/ (Phase MVP2-1) - scripts/verify_mvp2_phase.py
+          # already does this conditionally; this workflow step mirrors
+          # it manually since GitHub Actions YAML has no such conditional
+          # without extra tooling.
+
+      - name: Offline test suite (excludes live_model, real_embedding)
+        env:
+          # Explicit secret check (section 2.3): CI must never have this
+          # set, so an accidental live call would fail loudly (no API key)
+          # rather than silently spend money against a CI runner.
+          OPENROUTER_API_KEY: ""
+        run: |
+          source .venv/bin/activate
+          python -m pytest -q -m "not live_model and not real_embedding" --strict-markers
+
+      - name: git diff --check (whitespace errors)
+        run: git diff --check

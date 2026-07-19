@@ -8,14 +8,12 @@ import re
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from agents.budget_agent import BudgetAdvisorAgent
 from agents.debt_agent import DebtAnalyzerAgent
 from agents.goal_agent import GoalPlannerAgent
 from agents.savings_agent import SavingsStrategyAgent
 from agents.spending_agent import SpendingAnalyzerAgent
-from utils import contracts
 from utils import finance_calc as fc
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

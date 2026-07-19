@@ -24,7 +24,7 @@ from typing import List, Optional
 import pandas as pd
 
 from agents.data_agent import DataIngestionAgent
-from utils.contracts import ReviewItem, Transaction
+from utils.contracts import ReviewItem
 from utils.region import DEFAULT_REGION, resolve_region
 
 # --------------------------------------------------------------------------

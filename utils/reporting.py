@@ -18,7 +18,15 @@ from __future__ import annotations
 from typing import List
 
 from utils.contracts import (
-    CoachSummary, Finding, FinancialProfile, FinancialSnapshot, Risk, Roadmap, ReportPackage, TrackerRow, Trend,
+    CoachSummary,
+    FinancialProfile,
+    FinancialSnapshot,
+    Finding,
+    ReportPackage,
+    Risk,
+    Roadmap,
+    TrackerRow,
+    Trend,
 )
 from utils.currency import format_money
 

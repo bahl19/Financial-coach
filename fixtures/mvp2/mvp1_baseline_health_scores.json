@@ -1,0 +1,6 @@
+{
+  "_comment": "Frozen MVP 1 FinancialSnapshot.health_score/health_band per golden fixture, hand-reviewed against the raw fixture inputs on 2026-07-19 by the same reviewer who accepted the Phase 11 release gate (Implementation Plan - MVP 1.md; no second reviewer available for this solo project, same disclosed limitation as fixtures/mvp2/mvp1_baseline_manifest.json's known_limitations). tests/test_golden.py's captured projection intentionally excludes health_score/health_band (Phase 6 scope was allocation/finding/risk/priority numbers, not the score), so this file exists to give Phase MVP2-0's required 'health_score remains unchanged' regression something frozen to compare against.",
+  "stable_high_surplus": {"health_score": 95, "health_band": "Thriving"},
+  "negative_cashflow": {"health_score": 26, "health_band": "At Risk"},
+  "income_drop_rising_dining": {"health_score": 76, "health_band": "Building"}
+}

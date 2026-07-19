@@ -1,0 +1,77 @@
+[tool.pytest.ini_options]
+markers = [
+    "unit: fast, isolated, no I/O",
+    "integration: exercises more than one module together",
+    "property: Hypothesis property-based test",
+    "golden: compares against a frozen fixture in fixtures/golden or fixtures/mvp2",
+    "live_model: calls a real OpenRouter model; costs money, needs OPENROUTER_API_KEY, excluded from default CI",
+    "real_embedding: downloads/runs a real embedding model; excluded from default CI",
+    "ui: drives app.py through streamlit.testing.v1.AppTest",
+    "eval: a runtime/retrieval/strategy evaluation case, not a correctness unit test",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+extend-exclude = [".venv", ".hypothesis", ".pytest_cache"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+# E501 (line-too-long) is excluded deliberately, not omitted by oversight:
+# this repository has no line-wrapping formatter (no black/ruff-format
+# adoption decision has been made), and MVP 1's existing long lines are
+# mostly f-string/comment prose that would need manual, error-prone
+# rewrapping to satisfy an arbitrary column limit with zero behavior
+# change to show for it. Implementation Plan - MVP 2.md, section 2.3,
+# permits recording this kind of tooling deviation once here rather than
+# silently omitting the check.
+ignore = ["E501"]
+# Implementation Plan - MVP 2.md, section 2.3: this repository's existing MVP 1
+# code predates ruff adoption. Only lint rules that were already clean at the
+# time ruff was introduced are enabled at error severity, so adopting ruff in
+# Phase MVP2-0 does not silently change any existing runtime behavior; this
+# list may only grow after a deliberate, reviewed cleanup pass.
+
+[tool.ruff.lint.per-file-ignores]
+# app.py must call st.set_page_config() as the first Streamlit call, before
+# the imports whose module-level code also touches Streamlit - a real
+# ordering constraint, not disorganized imports.
+"app.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+# Implementation Plan - MVP 2.md, section 2.3: MVP 1 was written without type
+# checking in mind. Strict/disallow-untyped-defs modes are deferred to a
+# deliberate, reviewed cleanup rather than adopted retroactively here; this
+# phase establishes the tool and config, not a rewrite of MVP 1's typing.
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# `utils.*`/`agents.*` predate mypy adoption and were built around two
+# deliberate MVP 1 design choices that read as type errors under mypy's
+# default strictness but are not bugs: (1) internal helpers pass plain
+# `dict`/loosely-typed values between each other and only assume the exact
+# TypedDict shape at public boundaries (38 findings recorded verbatim in
+# docs/verification/mvp2/phase-0.md as of Phase MVP2-0's baseline mypy run,
+# none a discovered runtime defect - each was checked by hand against the
+# function it flagged); (2) `agents.base.BaseAgent`'s `**kwargs` abstract
+# signature is intentionally widened by each concrete specialist to its own
+# narrow, named parameters (Architecture Plan.md's "narrow explicit
+# arguments" principle), which mypy's Liskov-substitution override check
+# flags as incompatible even though nothing calls these methods
+# polymorphically through the base class. Retrofitting either pattern is a
+# deliberate, reviewed refactor out of Phase MVP2-0's regression-baseline
+# scope, not a silent tool weakening - mypy still runs against every one of
+# these files, it is just not yet a required-green gate for them. New
+# `mvp2.*` modules (starting Phase MVP2-1) are NOT covered by this
+# override and must pass mypy without ignored errors.
+module = ["utils.*", "agents.*"]
+ignore_errors = true

@@ -13,7 +13,6 @@ directly, which is what actually produces the output in question.
 """
 
 import pandas as pd
-import pytest
 from streamlit.testing.v1 import AppTest
 
 from agents import graph as g

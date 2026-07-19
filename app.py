@@ -28,11 +28,10 @@ load_dotenv()
 
 from agents import graph as g
 from agents.orchestrator import build_chat_reply
-from utils import app_state
+from utils import app_state, ingestion
 from utils import finance_calc as fc
-from utils import ingestion
-from utils import reporting as rp
 from utils import region as rg
+from utils import reporting as rp
 from utils import scenarios as sc
 from utils.contracts import default_assumptions, validate_profile
 from utils.currency import CURRENCY_SYMBOLS, currency_symbol, format_money

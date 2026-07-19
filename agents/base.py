@@ -15,7 +15,6 @@ each an explicit argument, so a specialist can only narrate the number it
 was given, never recompute its own.
 """
 
-from typing import Optional
 
 from utils.llm import complete, is_live
 

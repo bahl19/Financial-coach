@@ -49,7 +49,7 @@ def build_chat_reply(query: str, graph_result: dict) -> str:
     freestanding LLM call. `goal_result` is the one specialist that returns
     a list (one entry per goal), so its narratives are joined individually."""
     matched_routes = match_routes(query)
-    narratives = []
+    narratives: list = []
     for route in matched_routes:
         result = graph_result.get(_ROUTE_TO_RESULT_KEY[route])
         if result is None:
