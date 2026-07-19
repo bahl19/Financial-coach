@@ -1,208 +1,282 @@
-# 💰 AI Financial Coach — Multi-Agent Financial Advisor
+# AI Finance Coach
 
-> Every rupee is computed deterministically. The LLM only narrates.
+> Deterministic financial analysis with governed AI explanations—not regulated financial advice.
 
-AI Financial Coach turns a bank statement (CSV/PDF), a handful of debts, and a few goals into a **prioritized, numbers-backed action plan** — not just another dashboard. A LangGraph pipeline of specialist agents each reasons over a grounded slice of the user's real numbers (spending, debt payoff, savings targets, budget fit, goal feasibility), and a single deterministic allocator decides where the surplus actually goes.
+AI Finance Coach is a Streamlit application that turns a user's confirmed income, transactions, debts, savings, investments, goals, constraints, and assumptions into an auditable financial snapshot and prioritized action plan.
 
-**🔗 Live app: [financialcoach.streamlit.app](https://financialcoach.streamlit.app/)**
+Financial calculations, findings, risks, allocations, validation, scenarios, and exports are produced by deterministic Python. Specialist agents use OpenRouter only to explain those verified results in plain language. If OpenRouter is unavailable, the application uses rule-based narratives and remains functional offline.
 
-Current state: **MVP 1 complete** (tag `phase11-done`) plus **MVP 2 Phase 0** (tag `mvp2-phase-0-done`, tooling + regression baseline only). See [What's deferred](#-whats-deferred) for everything that is planned but deliberately not built yet.
+**Deployment endpoint:** [financialcoach.streamlit.app](https://financialcoach.streamlit.app/)
 
----
+The hosted endpoint may require Streamlit or application sign-in. Local development can explicitly enable anonymous access as described below.
 
-## 🧭 Core design decisions
+## Architecture at a glance
 
-1. **Compute/narrate split.** `utils/finance_calc.py` (the "tabular RAG" layer) produces *every* number — spending totals, payoff schedules, savings projections, budget deltas. Specialist agents hand those already-computed figures to an LLM purely for phrasing. No LLM output ever becomes a dollar amount.
-2. **Single allocator.** `utils/roadmap.py` is the *only* place surplus money is allocated. Its `_AllocationLedger` waterfall runs: protected buffer → starter emergency buffer → high-APR debt acceleration → goals by priority → remainder to savings or investments. No agent can spend the same rupee twice.
-3. **Consistency validation.** `utils/validation_structured.py` (authoritative) and `utils/validation_prose.py` (heuristic) cross-check every narrative against the numbers that produced it; a drifting narrative is replaced with that agent's deterministic fallback before display.
-4. **Explainable orchestration.** A LangGraph `StateGraph` with explicit dependency edges (Savings waits on both Spending *and* the Roadmap) instead of one mega-prompt. Every node is testable in isolation.
-5. **Offline-first.** With no `OPENROUTER_API_KEY`, every agent falls back to a rule-based templated narrative built from the same numbers. The full journey — including the report export — works with zero credentials.
-6. **Region/currency aware.** Categorization keywords, benchmark rates (FD/PPF/SIP), and currency symbols are independently configurable. India/INR is the default.
+![Finance Coach high-level implementation architecture](planning-docs/finance-coach-high-level-implementation-architecture.png)
 
----
+This is the consolidated target architecture across **MVP 1**, **MVP 2**, and **Future Works**. The colour labels identify the planned delivery stage.
 
-## 🏗️ Current architecture
+### Detailed architecture diagram
 
-```
-Upload CSV/PDF  ─┐
-Load sample data ┴─> agents/data_agent.py      column aliasing (CSV) / pdfplumber+regex (PDF)
-                     utils/ingestion.py        region keyword categorization + confidence
-                       ↓  low-confidence rows surfaced in an editable review table
-                     utils/contracts.py        validate_profile() gates the "Run analysis" button
-                       ↓
-                     utils/finance_calc.py     snapshot · health score · trends · findings · risks
-                       ↓
-                     agents/graph.py           LangGraph StateGraph
-                       ├─ Stage A (parallel):  spending_agent   ·   build_roadmap  ← sole allocator
-                       ├─ Stage B (fan-out):   budget · savings · debt · goal agents
-                       ├─ Stage C:             validation (structured + prose, with fallback swap)
-                       └─ Stage D:             utils/coach.py — ranked summary, max 3 priorities
-                       ↓
-                     Streamlit tabs · what-if scenarios · utils/reporting.py → Markdown + CSV tracker
-```
+![Detailed Finance Coach architecture](Detailed%20Architecture%20Diagram.png)
 
-### Agents
+The detailed diagram expands the same staged architecture into the user journey, UI surface, deterministic financial core, LangGraph state and orchestration, specialist agents, evaluation boundaries, RAG, and Future Works gateways.
 
-| Agent | Grounded on | Produces | Allocates? |
-|---|---|---|---|
-| 📥 Data Ingestion | Uploaded CSV/PDF | Clean, categorized transaction table | — |
-| 🧾 Spending Analyzer | Categorized transactions | Category totals, monthly cash flow, trend flags | No |
-| 💳 Debt Analyzer | Debts (balance, APR, min payment) | Avalanche vs. snowball simulation with real interest/timeline | Mirrors roadmap |
-| 🏦 Savings Strategist | Income, expenses, savings, APY/CAGR | Emergency-fund target, 24-month projection | Mirrors roadmap |
-| 📋 Budget Advisor | Income, actual split | Actual vs. 50/30/20 with per-bucket variance | No |
-| 🎯 Goal Planner | Goals + surplus | Required monthly contribution and feasibility, **per goal** | Mirrors roadmap |
-| 🧭 Roadmap Allocator | All of the above | The prioritized action list — **the only allocation authority** | **Yes** |
+### Delivery roadmap
 
-`agents/base.py` is a template method: build a grounded summary → ask the LLM → on `None`, use `_fallback_narrative()`. Every specialist returns the same `SpecialistResult` shape.
+| Stage | Scope |
+| :--- | :--- |
+| MVP 1 | Deterministic financial core, synchronous LangGraph orchestration, specialist explanations, validation, Coach synthesis, scenarios, report and tracker export |
+| MVP 2 | Constrained adaptive strategy, reviewed-document RAG, financial dimensions and resilience scoring, grounded NLP interaction, preferences, and session-scoped what-if analysis |
+| Future Works | Persistent cases, governed live laws/news/market/FX context, forecasting, portfolio data, production reconciliation, consent, audit, and durable storage |
 
-`agents/orchestrator.py` is no longer an agent — it is keyword routing (`match_routes`) plus `build_chat_reply()`, which stitches together narratives already in the graph result. **The chat tab makes no second LLM call**, so answers can never contradict the report.
+The detailed plans are maintained in the [`planning-docs/`](planning-docs/) directory.
 
-### Modules
+## Planning documentation
 
-| Module | Role |
+[`planning-docs/`](planning-docs/) contains the complete phase-wise product, architecture, implementation, UI, and execution planning history. It is the reference area for understanding what belongs to MVP 1, MVP 2, and Future Works.
+
+| Planning area | Documents |
 |---|---|
-| `utils/contracts.py` | Leaf module. All `TypedDict` schemas, enums, `validate_profile()`. Imports nothing project-specific. |
-| `utils/finance_calc.py` | All deterministic math, incl. `calculate_health_score` (30/30/25/15 weights). No LLM. |
-| `utils/ingestion.py` | Tolerant boundary: region keyword tables, confidence scoring, 5 data-quality checks. |
-| `utils/roadmap.py` | The allocation waterfall. LLM used for prose only. |
-| `utils/validation*.py` | Structured (6 checks) + prose (3 checks) tiers, plus remediation. |
-| `utils/coach.py` · `reporting.py` · `scenarios.py` | Ranking · formatting · immutable what-if comparison. |
-| `utils/llm.py` | OpenRouter via the `openai` SDK. Returns `None` on any failure — never raises. |
-| `utils/auth.py` | Logto OIDC through Streamlit's native `st.login()`/`st.user`. Fails closed. |
-| `utils/app_state.py` | The only session-state reader/writer; invalidates stale analysis on any upstream edit. |
-| `utils/theme.py` · `landing.py` · `currency.py` · `region.py` | Brand theming, landing page, INR/USD, India/generic benchmarks. |
+| Architecture | [`Architecture Plan.md`](planning-docs/Architecture%20Plan.md), [`Architecture Plan - MVP 2.md`](planning-docs/Architecture%20Plan%20-%20MVP%202.md), [`Architecture Plan - Later.md`](planning-docs/Architecture%20Plan%20-%20Later.md) |
+| Implementation | [`Implementation Plan - MVP 1.md`](planning-docs/Implementation%20Plan%20-%20MVP%201.md), [`Implementation Plan - MVP 2.md`](planning-docs/Implementation%20Plan%20-%20MVP%202.md), [`Implementation Plan - MVP 2 Priority.md`](planning-docs/Implementation%20Plan%20-%20MVP%202%20Priority.md) |
+| UI and execution | [`Unified UI Implementation Plan.md`](planning-docs/Unified%20UI%20Implementation%20Plan.md), [`Phase Prompts - MVP 2.md`](planning-docs/Phase%20Prompts%20-%20MVP%202.md) |
+| Product context and review | [`intent.md`](planning-docs/intent.md), [`Problem Statement.md`](planning-docs/Problem%20Statement.md), [`Review.md`](planning-docs/Review.md), [`gaps.md`](planning-docs/gaps.md) |
 
-### App flow
+The architecture diagrams and earlier design material are also preserved there, including the [`Finance Coach - Consolidated Architecture.md`](planning-docs/Finance%20Coach%20-%20Consolidated%20Architecture.md) and [`Base Architecture.md`](planning-docs/Base%20Architecture.md).
 
-`app.py` is one linear Streamlit script (no `pages/`), gated by `st.stop()`:
+## Current user journey
 
-**Landing page → sign-in → upload/sample → review categories → confirm details → 7 analysis tabs → 5 scenario tabs → download report.**
+```text
+Landing page
+  → sign in, or explicitly enable local anonymous access
+  → upload a CSV/PDF statement or load sample data
+  → normalize transactions and flag data-quality issues
+  → review and correct uncertain categories
+  → confirm income, expenses, savings, investments, debts, goals, constraints, and assumptions
+  → calculate snapshot, trends, findings, and risks
+  → build one deterministic allocation and prioritized roadmap
+  → generate specialist explanations
+  → validate specialist results before display
+  → synthesize the Coach summary
+  → explore specialist tabs, grounded chat, and what-if scenarios
+  → download a Markdown report and CSV tracker
+```
 
----
+## Current architecture
 
-## 🚀 Quick start
+### Deterministic financial core
+
+The deterministic core owns financial truth. It performs:
+
+- transaction normalization, regional keyword categorization, confidence flags, and human review;
+- cash-flow, net-worth, debt, budget, savings, investment, goal, and health calculations;
+- trend, finding, risk, and data-quality derivation;
+- the single authoritative surplus-allocation waterfall and roadmap;
+- consistency validation, scenario calculations, report rendering, and tracker generation.
+
+The LLM does not calculate money, define formulas, change priorities, allocate surplus, or overwrite user facts.
+
+### LangGraph orchestration
+
+The graph is synchronous and in-memory. It is compiled without a checkpointer, and no graph state survives a Streamlit rerun.
+
+```text
+Pre-graph deterministic pipeline
+  FinancialProfile → Snapshot → Trends → Findings → Risks
+
+LangGraph
+  START
+    ├─ Spending Analyzer
+    └─ Build deterministic roadmap (the only allocation authority)
+          ↓
+  Budget Advisor ← Spending result
+  Savings Strategist ← Spending result + roadmap allocation
+  Debt Analyzer ← Roadmap allocation
+  Goal Planner ← Per-goal roadmap allocations
+          ↓
+  Deterministic consistency validator
+          ↓
+  Coach synthesis
+          ↓
+         END
+```
+
+### Components and agents
+
+| Component | Grounded on | Responsibility |
+|---|---|---|
+| Input and ingestion service | Uploaded CSV/PDF or sample data | Parse transactions, normalize fields, categorize with confidence, flag uncertain entries for review |
+| Spending Analyzer | Confirmed categorized transactions | Produce category totals, monthly cash flow, and recent category trends |
+| Deterministic roadmap | Profile, snapshot, findings, and risks | Allocate available surplus once and create ordered actions |
+| Budget Advisor | Spending result and confirmed income | Compare average actual spending with the 50/30/20 guideline |
+| Savings Strategist | Spending result and roadmap allocation | Explain emergency-fund targets and 24-month savings/investment projections using confirmed rates |
+| Debt Analyzer | Debts and roadmap allocation | Compare avalanche and snowball payoff simulations and explain the trade-off |
+| Goal Planner | Goals and per-goal roadmap allocations | Calculate required contributions, feasibility, and shortfalls |
+| Consistency validator | Snapshot, evidence, roadmap, and structured specialist results | Reject inconsistent structured claims and replace invalid narratives with deterministic fallbacks |
+| Coach synthesis | Validated results | Rank and summarize existing risks, patterns, and actions without calculating anything new |
+
+Each specialist returns structured fields plus a narrative. OpenRouter may generate the narrative; deterministic templates provide the offline fallback.
+
+### Ask the Coach
+
+The current chat is report-grounded navigation, not an unrestricted financial chatbot. A keyword router selects relevant narratives from the **same already-computed graph result** displayed in the report tabs. It does not invoke a second graph run, independently recalculate the plan, mutate the baseline report, or access live laws, news, market data, or the web.
+
+The richer typed NLP interaction layer, reviewed-document RAG, suggested prompts, model routing, and tool calling are MVP 2 work and are not advertised in the current UI until implemented.
+
+## Quick start
+
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/bahl19/Financial-coach.git
 cd Financial-coach
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env      # optional — see below
-streamlit run app.py
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
-Open **http://localhost:8501**, click **"Load sample data"** for an instant demo, or upload your own CSV/PDF.
+### 2. Configure local access
 
-### LLM key (optional)
+Authentication fails closed. Choose one of these local configurations:
 
+**Local anonymous development**
+
+Create `.env` from `.env.example` and set:
+
+```env
+FC_ALLOW_ANONYMOUS=true
 ```
+
+Do not enable anonymous access on a public deployment.
+
+**Logto sign-in**
+
+Copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and complete its `[auth]` settings, including `client_secret`, `cookie_secret`, and the correct `/oauth2callback` redirect URI. Keep the supplied `client_kwargs` login prompt.
+
+### 3. Configure OpenRouter (optional)
+
+Add these values to `.env`:
+
+```env
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
 OPENROUTER_MODEL=anthropic/claude-sonnet-4.5
 ```
 
-No key? Every agent uses its rule-based fallback narrative. Only the prose changes — never a number.
+Without an API key—or if a model call fails—the app uses deterministic fallback narratives.
 
-### Sign-in (Logto)
-
-**Sign-in fails closed.** With no `[auth]` block configured, the app stops on an explanatory screen rather than serving itself to everyone. To run locally without configuring sign-in, set `FC_ALLOW_ANONYMOUS=true` in `.env`. **Never set that on a public deployment.**
-
-To enable real sign-in: copy `.streamlit/secrets.toml.example` → `.streamlit/secrets.toml` (gitignored) and fill in `client_secret` and `cookie_secret`. Keep the `client_kwargs = { prompt = "login" }` line — Streamlit otherwise sends `prompt=select_account`, which Logto rejects, and the Sign in button silently bounces back. Needs `Authlib>=1.3.2` (already in `requirements.txt`); an older virtualenv will raise at click time even though everything else looks configured.
-
-**Deploying:** set the same `[auth]` block in Streamlit Community Cloud → *Settings* → *Secrets*, with `redirect_uri` pointing at your deployed URL's `/oauth2callback`.
-
----
-
-## 🧪 Tests & checks
+### 4. Run
 
 ```bash
-python -m pytest -q -m "not live_model and not real_embedding" --strict-markers
-python -m ruff check .
-python -m mypy utils agents          # add mvp2 once that package exists
-python scripts/verify_mvp2_phase.py --phase 0
+streamlit run app.py
 ```
 
-**445 tests** across 21 files. Notable coverage:
+Open [http://localhost:8501](http://localhost:8501), dismiss the landing page, and either load the bundled sample data or upload a statement.
 
-- `tests/test_app.py` — full sample journey driven by `streamlit.testing.v1.AppTest`, incl. the landing gate, auth gate, fail-closed behavior, and a test that the repo never ships a secrets file.
-- `tests/test_golden.py` + `fixtures/golden/` — 3 end-to-end scenarios frozen as ID/severity/allocation projections (narratives deliberately excluded, so rewording doesn't break them).
-- `tests/test_properties.py` — Hypothesis invariants.
-- `tests/test_graph.py` — asserts the LangGraph result matches `run_pipeline_direct()`, so the graph can't silently drift from its documented sequential equivalent.
-- `tests/mvp2/test_mvp1_regression.py` — the frozen MVP 1 baseline (manifest hashes, health scores, byte-reproducible reports) *plus negative tests that mutate a cent and assert the regression fails*.
-- `tests/mvp2/test_dependency_boundaries.py` — AST import-boundary enforcement: no domain module may import `streamlit`/`openai`/`chromadb` outside the named adapters, nothing may import `app`, and the planned `mvp2.*` dependency graph is enforced ahead of the package existing. Planted-offender tests prove the scanners aren't vacuous.
+## Input contracts
 
-CI (`.github/workflows/ci.yml`, Python 3.13) runs install → ruff → mypy → the offline suite with an empty API key → `git diff --check`.
+### Transactions CSV
 
----
-
-## 📊 Data contract
-
-**Transactions CSV** — `date`, `description`, `amount` (**expenses negative, income positive**). Column aliases accepted: `transaction date`/`posted date`, `memo`/`merchant`/`name`, `amt`/`value`. PDF statements are parsed with pdfplumber against a `dd/mm/yy · description · ₹|$|Rs amount` line pattern.
-
-**Debts** — `{ "name": "Credit Card", "balance": 4200.0, "apr": 22.9, "min_payment": 120.0 }`
-**Goals** — `{ "name": "Hawaii Vacation", "amount": 4000.0, "months": 10, "current": 200.0 }`
-
-Both are edited inline in a data table during Step 3.
-
----
-
-## 🛠️ Tech stack
-
-Streamlit · LangGraph (`StateGraph`) · OpenRouter via the `openai` SDK (model-agnostic, optional) · pandas/numpy · pdfplumber · Plotly · `TypedDict` contracts · pytest + Hypothesis + `AppTest` + golden fixtures · ruff + mypy · Logto (OIDC).
-
----
-
-## 🔭 What's deferred
-
-Everything below is **planned and specified, but deliberately not implemented yet**. It is documented here so the current scope reads as a choice, not an omission. Full specs live in `Docs imp/`.
-
-### MVP 2 — RAG-assisted constrained adaptive strategy
-
-Phase MVP2-0 (tooling, regression baseline, CI, dependency-boundary enforcement) is **done**. The `mvp2/` package intentionally does not exist yet — the boundary tests already guard the shape it will take.
-
-| Phase | Scope | Status |
+| Column | Type | Notes |
 |---|---|---|
-| MVP2-1 | Financial Position Profile: 7 dimensions, 0–100 **Financial Resilience Score**, goal-aligned actions, user-confirmed preferences, `DecisionContext`. No retrieval, no model call. | Next up. A 2-hour priority cut (6 score-owning dimensions, no preference UI) is planned in `Implementation Plan - MVP 2 Priority.md`; the 7th dimension, preference UI, exhaustive boundary tests, and 200-example property runs remain deferred within it. |
-| MVP2-2 | Reviewed 10–15 document corpus, open-source embeddings in local ChromaDB, deterministic topic/metadata filtering. **RAG supplies evidence, never numbers.** | Not started |
-| MVP2-3 | Agent capability layer: schema-constrained tools, purpose-based OpenRouter model routes, per-route token/cost budgets. | Not started |
-| MVP2-4 | Constrained adaptive strategy: a three-policy allowlist where the model may return only a `strategy_id`; a checked-in registry owns all executable behavior, with `baseline_balanced` fallback. | Not started |
-| MVP2-5 | Dual-depth reporting — a Novice profile view and a Detailed audit view with exact maths explanations — resolving to the same immutable report version. | Not started |
-| MVP2-6 | Grounded NLP interaction over the report + profile-derived suggested prompts. | Not started |
-| MVP2-7 | Immutable session-scoped scenario workspace (copy-on-write overrides; the baseline report can never be mutated). | Not started |
-| MVP2-8 | Offline prompt/skill/model eval gates, hardening, release rehearsal. | Not started |
+| `date` | date | Any pandas-parseable date |
+| `description` | text | Merchant or memo used for categorization |
+| `amount` | number | Expenses are negative; income and deposits are positive |
 
-### Later — production
+The app adds category, confidence, review, and transaction-type fields during ingestion. Unmatched expenses become `Other` with low confidence and are presented for user review.
 
-Not started, and explicitly out of scope for the prototype timebox; each item adds operational and privacy obligations disproportionate to a demo.
+### Debt
 
-- **L0 Persistent identity & audit** — managed auth is done (Logto, moved up early); internal principal/case IDs, consent & retention records, PostgreSQL versioned contracts, private object storage, tenant isolation, export/delete workflow, and immutable audit events are all still deferred. **Nothing currently stores per-user data.**
-- **L1 Document reconciliation** — institution adapters, opening/closing balance reconciliation, internal-transfer pairing, duplicate/reversal handling, holdings & cost basis, row-level provenance.
-- **L2 Governed rules** — versioned, jurisdiction-scoped tax/regulatory rules with effective dates and human approval.
-- **L3 Structured market data** — licensed market/macro/rate/FX feeds with observation timestamps and source vintage.
-- **L4 Portfolio analytics** — valuation, allocation, concentration, risk-adjusted return, fee drag, liquidity.
-- **L5 Governed news** — allowlisted publishers producing expiring context alerts. **News may never allocate money.**
-- **L6 Forecasting** — calibrated scenarios with prediction intervals, backtesting, and a deterministic baseline.
-- **L7 Credit bureau** — consented, authorized bureau data shown *beside* — never blended into — the resilience score. The Coach must never imitate the CIBIL 300–900 scale or reconstruct a bureau score.
-- **L8 Regulated product advice** — named loan/fund/stock guidance, gated on jurisdiction capability, suitability, disclosures, and licensed approval. Disabled by default.
-- **L9–L12** — expanded dynamic allocation, production conversational gateway, model/prompt governance, resumable workflows and operations.
+```json
+{
+  "name": "Credit Card",
+  "balance": 4200.0,
+  "apr": 22.9,
+  "min_payment": 120.0
+}
+```
 
-**The invariant across every deferred phase:** retrieval, news, forecasts, and models may influence *which* pre-approved deterministic policy runs and *how* it is explained. They may never define a policy, compute a number, or move money.
+### Goal
 
----
+```json
+{
+  "name": "Emergency Fund Boost",
+  "amount": 4000.0,
+  "months": 10,
+  "current": 200.0,
+  "priority": "high"
+}
+```
 
-## ⚠️ Notes & known limitations
+Goal priority must be `high`, `medium`, or `low`. Debts and goals are edited in Step 3 of the main application journey.
 
-- Auto-categorization is keyword-based (`utils/ingestion.py`, region-layered) — uncommon merchants fall back to `Other` and are surfaced in the review table for correction.
-- The Budget Advisor normalizes all-time spending to a monthly average before comparing to 50/30/20, so partial months don't skew the split.
-- Debt payoff rolls freed-up minimum payments into the next target debt, matching how avalanche/snowball are conventionally defined.
-- No persistence: reload the page and the session is gone. This is deliberate until L0.
-- `budget_agent.py` hardcodes `₹` in its prompt/fallback rather than using `format_money` — a known USD-path wart.
-- `UI/` holds the original design-tool export; only `UI/assets/app-demo.mp4` is consumed at runtime. `utils/landing.py` rebuilds the landing page in Streamlit primitives because `components.v1.html` iframes would break relative asset paths.
-- Single-reviewer verification throughout (solo project) — disclosed rather than smoothed over, and carried forward in every phase's evidence document under `docs/verification/`.
+## Project structure
 
----
+```text
+Financial-coach/
+├── app.py                         # Streamlit composition layer
+├── agents/
+│   ├── graph.py                   # Synchronous LangGraph and direct fallback path
+│   ├── orchestrator.py            # Keyword routing over an existing graph result
+│   ├── data_agent.py              # Tolerant CSV/PDF parsing
+│   ├── spending_agent.py
+│   ├── budget_agent.py
+│   ├── savings_agent.py
+│   ├── debt_agent.py
+│   ├── goal_agent.py
+│   └── base.py                    # Structured narrative and LLM fallback adapter
+├── utils/
+│   ├── contracts.py               # Typed financial contracts and validation
+│   ├── ingestion.py               # Normalization, categorization, review, data quality
+│   ├── finance_calc.py            # Deterministic financial calculations
+│   ├── roadmap.py                 # Single deterministic allocation authority
+│   ├── validation.py              # Specialist consistency validation
+│   ├── coach.py                   # Deterministic Coach synthesis
+│   ├── scenarios.py               # Copy-on-write what-if calculations
+│   ├── reporting.py               # Markdown report and tracker package
+│   ├── auth.py                    # Streamlit OIDC/Logto authentication gate
+│   ├── app_state.py               # Controlled Streamlit session-state access
+│   ├── region.py / currency.py    # Region, benchmark, and display helpers
+│   ├── llm.py                     # OpenRouter adapter
+│   └── landing.py / theme.py      # Streamlit experience layer
+├── data/                          # Bundled sample transactions
+├── fixtures/                      # Contracts, edge cases, and golden scenarios
+├── tests/                         # Unit, property, integration, graph, and UI tests
+├── tests/mvp2/                    # Cumulative MVP 2 regression gates
+├── docs/verification/mvp2/        # Phase verification evidence
+├── scripts/verify_mvp2_phase.py   # Cumulative MVP 2 phase verifier
+├── plan/                          # Architecture and implementation plans
+├── requirements.txt
+└── pyproject.toml
+```
 
-## 👨‍💻 Built by
+## Verification
 
-C8 | Hackathon Group 13 · [github.com/bahl19](https://github.com/bahl19)
+After installing the requirements in a compatible virtual environment:
 
-> "Your income, spending, and debt — turned into a plan, not just a dashboard."
+```bash
+python -m pytest -q
+python -m ruff check .
+python -m mypy utils agents
+python scripts/verify_mvp2_phase.py --phase 0
+git diff --check
+```
+
+The cumulative verifier must be run with the latest completed MVP 2 phase number as implementation progresses.
+
+## Scope and safety
+
+- The application provides educational financial planning, not regulated financial, investment, tax, legal, lending, or product advice.
+- Current savings APY and investment CAGR are user-confirmed assumptions, not predictions or guarantees.
+- The FD/PPF/equity comparison uses illustrative regional benchmark assumptions and is not a product recommendation.
+- Live laws, news, market prices, FX data, forecasting, current product advice, durable user history, comprehensive transaction reconciliation, and governed production data gateways are **not currently implemented**.
+- Current authentication identifies the user but does not provide per-user persistent financial-case storage.
+- Auto-categorization is keyword-based and region-aware; the user must review uncertain categories before analysis.
+- Debt payoff simulation rolls freed minimum payments into the next target debt for avalanche and snowball comparisons.
+
+## Built by
+
+C8 · Hackathon Group 13<br>
+[github.com/bahl19](https://github.com/bahl19)
+
+> Your income, spending, and debt—turned into a grounded plan, not just a dashboard.

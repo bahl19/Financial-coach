@@ -22,6 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The regression baseline verifies the committed phase11-done tag.
+          # The default shallow checkout does not fetch repository tags.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:

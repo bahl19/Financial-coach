@@ -171,8 +171,8 @@ The exact references are listed at the end of this plan.
 
 | Phase | Complete feature unit | Architecture priority | Status | Completed | Verified by | Tag |
 |---|---|---|---|---|---|---|
-| MVP2-0 | MVP 1 handoff and regression baseline | P0 | Done (see caveats in [phase-0.md](docs/verification/mvp2/phase-0.md)) | 2026-07-19 | bahl19 + Claude Code | `mvp2-phase-0-done` |
-| MVP2-1 | Financial position, resilience score, actions, preferences | P1–P2 | Not started | | | |
+| MVP2-0 | MVP 1 handoff and regression baseline | P0 | Not started | | | |
+| MVP2-1 | Financial position, resilience score, actions, preferences | P1–P2 | Blocked by MVP2-0 | | | |
 | MVP2-2 | Reviewed corpus and governed local RAG | P3 | Blocked by MVP2-1 | | | |
 | MVP2-3 | Agent capability and model runtime | P4 | Blocked by MVP2-2 | | | |
 | MVP2-4 | Constrained adaptive strategy | P5 | Blocked by MVP2-3 | | | |

@@ -5,7 +5,7 @@ Use one phase at a time. Replace `{N}` with `0`–`8`. The implementation plan i
 ## Phase Implementation and Verification
 
 ```text
-Read the authoritative project documents and execute Phase MVP2-{0} from `Implementation Plan - MVP 2.md` exactly as written. Continue until its exit gate is verified. Then report the implementation, verification evidence, and any blocker.
+Read the authoritative project documents and execute Phase MVP2-{N} from `Implementation Plan - MVP 2.md` exactly as written. Continue until its exit gate is verified. Then report the implementation, verification evidence, and any blocker.
 ```
 
 ## Resume an Incomplete Phase
