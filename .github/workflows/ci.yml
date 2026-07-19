@@ -42,12 +42,19 @@ jobs:
       - name: Type check (mypy)
         run: |
           source .venv/bin/activate
-          python -m mypy utils agents
-          # `mvp2` is appended to this command starting with the first
-          # commit that adds mvp2/ (Phase MVP2-1) - scripts/verify_mvp2_phase.py
-          # already does this conditionally; this workflow step mirrors
-          # it manually since GitHub Actions YAML has no such conditional
-          # without extra tooling.
+          # Mirrors scripts/verify_mvp2_phase.py's `_mypy_targets()` exactly,
+          # rather than hardcoding `utils agents` and relying on someone
+          # remembering to add `mvp2` when Phase MVP2-1 lands. That manual
+          # step was a real divergence risk: pyproject.toml grants mypy
+          # `ignore_errors` to `utils.*`/`agents.*` but deliberately NOT to
+          # `mvp2.*`, so a forgotten edit here would silently stop CI from
+          # type-checking the one package that is actually enforced, while
+          # local runs via the verifier still caught it.
+          if [ -d mvp2 ]; then
+            python -m mypy mvp2 utils agents
+          else
+            python -m mypy utils agents
+          fi
 
       - name: Offline test suite (excludes live_model, real_embedding)
         env:
