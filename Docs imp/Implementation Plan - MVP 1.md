@@ -619,3 +619,24 @@ Reported by the user against the live deployment (`https://financialcoach.stream
 **Verification:** 441 passed, 4 skipped, green both with and without a local `.streamlit/secrets.toml`. Browser-verified that with no secrets and no waiver, the CTA reaches the "Sign-in isn't configured" screen and the app does not render behind it. `ruff` and `mypy` clean.
 
 **Still outstanding and not fixable from the repository:** the deployed app requires its `[auth]` secrets to be set in the Streamlit Community Cloud dashboard, with `redirect_uri = "https://financialcoach.streamlit.app/oauth2callback"` (already registered on the Logto application) and a long-lived client secret rather than the temporary development one. Until that is done the deployment will show the fail-closed screen - which is the intended behaviour, and strictly better than the wide-open state it replaces.
+
+### 2026-07-19 — Light mode rebuilt on native Streamlit theming; emoji replaced with mono icons
+
+Reported by the user: light-mode colours were wrong, and separately, a request to drop emoji for mono-colour icons that follow the palette, plus more generous spacing.
+
+**The light-mode bug was architectural, not a bad colour pick.** Two causes, both found by inspecting the rendered DOM rather than re-reading the CSS:
+
+1. **Widgets read `config.toml`, not the stylesheet.** The number-input steppers rendered `rgb(13,34,56)` - exactly the old `secondaryBackgroundColor`. With a single static dark theme declared there, every widget Streamlit styles itself stayed navy in light mode regardless of what the injected CSS said. The data-editor grid and chart backgrounds were the same story, which is why earlier entries recorded them as permanent limitations. They were not limitations; they were a consequence of fighting the platform.
+2. **Some override rules matched nothing.** `[data-baseweb="select"] > div` selected zero elements in this Streamlit version, so the select dropdown had never been styled at all - it only looked fine in dark mode because the static theme already was dark.
+
+**And one genuine colour error, now measured rather than eyeballed.** Brand mint `#5ef3ce` was being used as a text colour. Against the light background it measures **1.3:1**, versus WCAG AA's 4.5:1 minimum - unreadable, and the visible symptom the user reported. Mint is a *fill* colour. Light mode now uses a deep teal-green `#0a7057` (5.7:1 on the page, 6.1:1 on cards) wherever the accent carries text or an icon, and pairs that fill with white (6.1:1) on buttons. Dark mode keeps mint, which measures 13.2:1 on navy. The palettes gained explicit `accent_text` / `accent_fill` / `accent_fill_ink` tokens so the two roles can never be conflated again.
+
+**Fix:** Streamlit 1.59 supports real per-mode theming, so `.streamlit/config.toml` now declares `[theme]` (light) and `[theme.dark]`, and `utils/theme.py` reads the active mode via `st.context.theme.type` and injects only the brand layer on top. This fixed the steppers, the select dropdown, the dataframe grid, and chart backgrounds at their source, and let `apply_plotly_template()` drop its always-dark workaround and follow the active mode.
+
+**The custom sidebar toggle was removed, deliberately.** There is no Python API to set Streamlit's native theme, so a custom toggle can only drive the CSS layer while the widget layer follows Streamlit - which *is* the bug above. Mode is now switched through Streamlit's own Appearance setting (top-right menu → Settings → Appearance), which also follows the OS preference by default; `render_theme_hint()` points at it from the sidebar. This trades a more discoverable control for one that is actually correct, and it was flagged to the user rather than changed quietly.
+
+**Emoji removed.** Tabs, sidebar, buttons, alerts, downloads and the page icon now use Streamlit's built-in Material icons (`:material/...:`), which render as text and therefore inherit the palette in both themes. The landing and sign-in screens use small stroke SVGs drawn with `currentColor` for the same reason. Roadmap severity was a set of coloured emoji circles (🔴🟠🟡⚪🟢); it is now one geometric glyph tinted from a per-theme token, so severity colour stays meaningful in both modes. Beyond theming, emoji rendered inconsistently across platforms and were announced verbatim by screen readers.
+
+**Spacing.** Added deliberate rhythm rather than ad-hoc nudges: wider main-container padding with a max width, larger vertical block gaps, real margins on headings, roomier metric/expander/button/tab padding, and more space between sidebar controls.
+
+**Verification:** 441 passed, 4 skipped. `ruff` and `mypy` clean. Browser-verified in both modes by driving Chromium with `color_scheme` set to light and dark across landing → sign-in gate → Step 3 → analysis, zero console errors in either. Test label assertions were updated for the icon directives; no test bypasses the change.

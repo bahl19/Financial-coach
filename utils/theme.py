@@ -1,29 +1,44 @@
-"""Brand theme: injects the landing page's navy/mint design language into
-the Streamlit app, with a light-mode counterpart, so the marketing site
-(`UI/Financial Coach Landing.dc.html`), the sign-in page
-(`UI/uploads/financial-coach-login.html`), and the app itself read as one
-product rather than three unrelated screens.
+"""Brand theme: the navy/mint design language from the landing page, applied
+across the app in both light and dark mode.
 
-Design tokens are copied verbatim from the landing/login pages' `:root`
-custom properties for dark mode; the light palette is a deliberately new,
-accessible counterpart built from the same three brand colors (navy, mint,
-green) rather than an inverted guess - mint at full brightness (`#5ef3ce`)
-fails contrast as text/link color on a light background, so light mode
-darkens it for text/icons/links while keeping the exact brand mint as a
-fill color (buttons, badges, chart bars) with the landing page's own
-dark-navy-on-mint pairing, which is contrast-safe in both themes by
-construction.
+**How theming works here, and why it changed.** The first version of this
+module declared a single static *dark* theme in `.streamlit/config.toml` and
+tried to repaint everything else at runtime with injected CSS, driven by a
+custom sidebar toggle. That could not work, for two reasons found by
+inspecting the rendered DOM rather than by reading the code:
 
-Streamlit has no first-class hot-swappable theme system, so switching modes
-just reruns the script (Streamlit's normal execution model) with a
-different palette selected from `st.session_state` and re-injects a full
-`<style>` block - there is no client-side toggle logic to keep in sync.
+1. Several widgets take their colours straight from `config.toml`, not from
+   the page's CSS - the number-input steppers rendered `rgb(13,34,56)`, which
+   is precisely the old `secondaryBackgroundColor`. In light mode they stayed
+   navy no matter what the stylesheet said.
+2. Some override rules matched nothing at all. `[data-baseweb="select"] > div`
+   selected zero elements in this Streamlit version, so the select dropdown
+   was never being styled in the first place.
 
-This module is exempted from `tests/mvp2/test_dependency_boundaries.py`'s
-no-streamlit-in-domain-code rule the same way `utils/app_state.py`,
-`utils/llm.py`, and `utils/auth.py` already are: it *is* the Streamlit
-adapter for this concern, not domain code that should be importing
-Streamlit directly.
+Streamlit 1.59 supports real per-mode theming (`[theme]` plus `[theme.dark]`),
+so the palette now lives there and Streamlit applies it to its own widgets -
+including the canvas-rendered dataframe grid, which CSS cannot reach at all.
+This module reads the active mode through `st.context.theme.type` and injects
+only the *brand* layer on top: fonts, headings, cards, accents, and spacing.
+
+**The custom sidebar toggle is gone.** It could not drive Streamlit's native
+theme (there is no Python API to set it), so keeping it would have meant the
+CSS layer and the widget layer disagreeing - which is exactly the bug being
+fixed. Mode is now switched through Streamlit's own Appearance setting
+(top-right menu → Settings → Appearance), which additionally follows the
+operating system preference by default.
+
+**Colours are contrast-checked, not eyeballed.** Brand mint `#5ef3ce` is a
+*fill* colour: measured as text on the light background it is 1.3:1, far
+below WCAG AA's 4.5:1, which is why light mode read as broken. Light mode
+therefore uses a deep teal-green (`#0a7057`, 5.7:1) wherever the accent
+carries text or an icon, and reserves solid fills for buttons where it pairs
+with white (6.1:1). Dark mode keeps mint, which is 13.2:1 on navy.
+
+Like `utils/app_state.py`, `utils/llm.py`, `utils/auth.py`, and
+`utils/landing.py`, this is a designated Streamlit adapter and is exempt from
+the no-Streamlit-in-domain-code rule in
+`tests/mvp2/test_dependency_boundaries.py` on that basis.
 """
 
 from __future__ import annotations
@@ -36,11 +51,11 @@ import streamlit as st
 
 ThemeMode = Literal["dark", "light"]
 
-_SESSION_KEY = "theme_mode"
-_DEFAULT_MODE: ThemeMode = "dark"
+_DEFAULT_MODE: ThemeMode = "light"  # matches [theme] base in .streamlit/config.toml
 
 # --------------------------------------------------------------------------
-# Palettes
+# Palettes - kept in step with .streamlit/config.toml, which owns the same
+# values for Streamlit's own widgets. Change both together.
 # --------------------------------------------------------------------------
 
 DARK = {
@@ -51,17 +66,14 @@ DARK = {
     "ink": "#e8eff6",
     "muted": "#8ca3b8",
     "line": "rgba(140,163,184,.18)",
-    "line_soft": "rgba(140,163,184,.10)",
-    "mint": "#5ef3ce",
-    "mint_dim": "rgba(94,243,206,.14)",
-    "mint_line": "rgba(94,243,206,.30)",
-    "mint_ink": "#06121f",  # text color placed ON TOP of a solid mint fill
+    "accent_text": "#5ef3ce",   # 13.2:1 on navy
+    "accent_fill": "#5ef3ce",
+    "accent_fill_ink": "#06121f",
+    "accent_dim": "rgba(94,243,206,.14)",
+    "accent_line": "rgba(94,243,206,.30)",
     "green": "#12c96f",
     "danger": "#ff7a7a",
-    "danger_dim": "rgba(255,122,122,.14)",
     "warning": "#f5b942",
-    "warning_dim": "rgba(245,185,66,.14)",
-    "shadow": "rgba(0,0,0,.45)",
 }
 
 LIGHT = {
@@ -70,19 +82,16 @@ LIGHT = {
     "panel": "#ffffff",
     "panel_2": "#f2f7f6",
     "ink": "#0e1b2a",
-    "muted": "#5b6b76",
-    "line": "rgba(14,27,42,.12)",
-    "line_soft": "rgba(14,27,42,.07)",
-    "mint": "#5ef3ce",  # kept exact for fills/badges/buttons (paired with mint_ink)
-    "mint_dim": "rgba(18,201,111,.10)",
-    "mint_line": "rgba(14,159,125,.35)",
-    "mint_ink": "#06121f",
-    "green": "#0e9d63",  # darkened for AA text/icon contrast on a light bg
+    "muted": "#5b6b76",         # 5.2:1
+    "line": "#d7e3e0",
+    "accent_text": "#0a7057",   # 5.7:1 on bg, 6.1:1 on card
+    "accent_fill": "#0a7057",
+    "accent_fill_ink": "#ffffff",  # 6.1:1 on the fill
+    "accent_dim": "rgba(10,112,87,.09)",
+    "accent_line": "rgba(10,112,87,.28)",
+    "green": "#0a7057",
     "danger": "#d92d20",
-    "danger_dim": "rgba(217,45,32,.08)",
     "warning": "#a15c07",
-    "warning_dim": "rgba(161,92,7,.10)",
-    "shadow": "rgba(16,32,45,.12)",
 }
 
 _FONT_IMPORT = (
@@ -92,244 +101,174 @@ _FONT_IMPORT = (
 
 
 def get_mode() -> ThemeMode:
-    return st.session_state.get(_SESSION_KEY, _DEFAULT_MODE)
+    """The mode Streamlit is actually rendering in. Falls back to the
+    `[theme]` base when unavailable (e.g. outside a script run, as in some
+    tests), so callers never have to handle `None`."""
+    try:
+        mode = st.context.theme.type
+    except Exception:
+        return _DEFAULT_MODE
+    return "dark" if mode == "dark" else "light" if mode == "light" else _DEFAULT_MODE
 
 
-def _set_mode(mode: ThemeMode) -> None:
-    st.session_state[_SESSION_KEY] = mode
+def palette(mode: ThemeMode | None = None) -> dict:
+    return DARK if (mode or get_mode()) == "dark" else LIGHT
 
 
-def _palette(mode: ThemeMode) -> dict:
-    return DARK if mode == "dark" else LIGHT
-
-
-def render_theme_toggle() -> ThemeMode:
-    """Sidebar dark/light toggle. Must be called before `inject_theme_css()`
-    reads `get_mode()` for this rerun, since the toggle writes the session
-    key `inject_theme_css()` reads."""
-    if _SESSION_KEY not in st.session_state:
-        _set_mode(_DEFAULT_MODE)
+def render_theme_hint() -> None:
+    """Points at Streamlit's native Appearance switcher, since this app no
+    longer ships its own (see the module docstring)."""
     with st.sidebar:
-        is_dark = st.toggle(
-            "\U0001f319 Dark mode", value=get_mode() == "dark", key="theme_dark_toggle",
-            help="Switch between the app's dark and light color themes.",
-        )
-    _set_mode("dark" if is_dark else "light")
-    return get_mode()
+        st.caption("Light or dark: top-right menu → Settings → Appearance.")
 
 
 def inject_theme_css(mode: ThemeMode | None = None) -> None:
     mode = mode or get_mode()
-    p = _palette(mode)
+    p = palette(mode)
     st.markdown(f"""
 <style>
 @import url('{_FONT_IMPORT}');
 
 :root {{
   --fc-bg:{p['bg']}; --fc-bg-alt:{p['bg_alt']}; --fc-panel:{p['panel']}; --fc-panel-2:{p['panel_2']};
-  --fc-ink:{p['ink']}; --fc-muted:{p['muted']}; --fc-line:{p['line']}; --fc-line-soft:{p['line_soft']};
-  --fc-mint:{p['mint']}; --fc-mint-dim:{p['mint_dim']}; --fc-mint-line:{p['mint_line']}; --fc-mint-ink:{p['mint_ink']};
-  --fc-green:{p['green']}; --fc-danger:{p['danger']}; --fc-danger-dim:{p['danger_dim']};
-  --fc-warning:{p['warning']}; --fc-warning-dim:{p['warning_dim']}; --fc-shadow:{p['shadow']};
+  --fc-ink:{p['ink']}; --fc-muted:{p['muted']}; --fc-line:{p['line']};
+  --fc-accent:{p['accent_text']}; --fc-accent-fill:{p['accent_fill']}; --fc-accent-ink:{p['accent_fill_ink']};
+  --fc-accent-dim:{p['accent_dim']}; --fc-accent-line:{p['accent_line']};
+  --fc-green:{p['green']}; --fc-danger:{p['danger']}; --fc-warning:{p['warning']};
 }}
 
-html, body, .stApp {{
-  background: var(--fc-bg) !important;
-  color: var(--fc-ink) !important;
-  font-family: 'Spline Sans', system-ui, sans-serif !important;
+/* ---------------- Type ---------------- */
+html, body, .stApp, [data-testid="stMarkdownContainer"] {{
+  font-family: 'Spline Sans', system-ui, sans-serif;
 }}
-[data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stBottomBlockContainer"] {{
-  background: transparent !important;
-}}
-[data-testid="stHeader"] {{ border-bottom: 1px solid var(--fc-line); backdrop-filter: blur(10px); }}
-[data-testid="stMainBlockContainer"] {{ padding-top: 2rem; }}
-
-::selection {{ background: var(--fc-mint); color: var(--fc-mint-ink); }}
-a, a:visited {{ color: var(--fc-mint); }}
-a:hover {{ color: var(--fc-green); }}
-
 h1, h2, h3, h4, h5, h6,
-[data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownContainer"] h2, [data-testid="stMarkdownContainer"] h3 {{
+[data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3 {{
   font-family: 'Archivo', system-ui, sans-serif !important;
   font-weight: 700 !important;
   letter-spacing: .01em;
-  color: var(--fc-ink) !important;
 }}
-[data-testid="stCaptionContainer"], .stCaption {{ color: var(--fc-muted) !important; }}
-hr, [data-testid="stDivider"] {{ border-color: var(--fc-line) !important; }}
 
-/* ---------------- Sidebar ---------------- */
-[data-testid="stSidebar"] {{
-  background: linear-gradient(180deg, var(--fc-panel), var(--fc-bg-alt)) !important;
-  border-right: 1px solid var(--fc-line);
+/* ---------------- Breathing room ----------------
+   The default block gap packs controls together; these give sections and
+   widgets room without changing any layout structure. */
+[data-testid="stMainBlockContainer"] {{
+  padding-top: 3rem !important;
+  padding-bottom: 5rem !important;
+  max-width: 1240px;
 }}
-[data-testid="stSidebar"] * {{ color: var(--fc-ink); }}
-[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {{ color: var(--fc-muted) !important; }}
+[data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] {{ gap: 1.15rem; }}
+[data-testid="stMarkdownContainer"] h2 {{ margin-top: 2.4rem; margin-bottom: .35rem; }}
+[data-testid="stMarkdownContainer"] h3 {{ margin-top: 1.6rem; margin-bottom: .3rem; }}
+[data-testid="stHeadingContainer"] {{ margin-bottom: .4rem; }}
+[data-testid="stHorizontalBlock"] {{ gap: 1.25rem; }}
+[data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] {{ gap: .9rem; }}
+[data-testid="stSidebarUserContent"] {{ padding-top: 1.5rem; }}
+hr {{ margin: 1.8rem 0; }}
+
+/* ---------------- Accent ---------------- */
+a, a:visited {{ color: var(--fc-accent); }}
+[data-testid="stMarkdownContainer"] strong {{ color: var(--fc-ink); }}
 
 /* ---------------- Buttons ---------------- */
-.stButton button, .stDownloadButton button, [data-testid="stBaseButton-secondary"] {{
-  background: transparent !important;
-  color: var(--fc-mint) !important;
-  border: 1px solid var(--fc-mint-line) !important;
-  border-radius: 10px !important;
+.stButton button, .stDownloadButton button {{
   font-family: 'Archivo', system-ui, sans-serif !important;
   font-weight: 700 !important;
-  letter-spacing: .04em;
-  transition: background .15s, transform .15s, box-shadow .15s;
+  letter-spacing: .03em;
+  border-radius: 10px !important;
+  padding: .55rem 1.1rem !important;
+  transition: transform .15s, box-shadow .15s, background .15s;
 }}
-.stButton button:hover, .stDownloadButton button:hover {{
-  background: var(--fc-mint-dim) !important;
-  border-color: var(--fc-mint) !important;
-  transform: translateY(-1px);
-}}
-[data-testid="stBaseButton-primary"], button[kind="primary"] {{
-  background: var(--fc-mint) !important;
-  color: var(--fc-mint-ink) !important;
+.stButton button:hover, .stDownloadButton button:hover {{ transform: translateY(-1px); }}
+[data-testid="stBaseButton-primary"] {{
+  background: var(--fc-accent-fill) !important;
+  color: var(--fc-accent-ink) !important;
   border: none !important;
-  border-radius: 10px !important;
-  font-family: 'Archivo', system-ui, sans-serif !important;
-  font-weight: 700 !important;
-  letter-spacing: .04em;
-  box-shadow: 0 8px 24px rgba(94,243,206,.28);
-  transition: transform .15s, box-shadow .15s;
 }}
-[data-testid="stBaseButton-primary"]:hover, button[kind="primary"]:hover {{
-  transform: translateY(-1px);
-  box-shadow: 0 12px 30px rgba(94,243,206,.4);
-}}
+[data-testid="stBaseButton-primary"]:hover {{ box-shadow: 0 10px 26px var(--fc-accent-dim); }}
 
 /* ---------------- Tabs ---------------- */
-[data-testid="stTabs"] [role="tablist"] {{ gap: 4px; border-bottom: 1px solid var(--fc-line) !important; }}
+[data-testid="stTabs"] [role="tablist"] {{ gap: .35rem; margin-bottom: .6rem; }}
 [data-testid="stTab"] {{
   font-family: 'Archivo', system-ui, sans-serif !important;
   font-weight: 600 !important;
-  color: var(--fc-muted) !important;
-  background: transparent !important;
+  padding: .5rem .9rem !important;
 }}
-[data-testid="stTab"][aria-selected="true"] {{ color: var(--fc-mint) !important; }}
-[data-testid="stTab"] .react-aria-SelectionIndicator {{ background-color: var(--fc-mint) !important; }}
+[data-testid="stTab"][aria-selected="true"] {{ color: var(--fc-accent) !important; }}
+[data-testid="stTab"] .react-aria-SelectionIndicator {{ background-color: var(--fc-accent) !important; }}
 
 /* ---------------- Metrics ---------------- */
 [data-testid="stMetric"] {{
-  background: linear-gradient(180deg, var(--fc-panel), var(--fc-panel-2));
+  background: var(--fc-panel);
   border: 1px solid var(--fc-line);
   border-radius: 14px;
-  padding: 16px 18px;
+  padding: 1.05rem 1.15rem;
 }}
 [data-testid="stMetricLabel"] {{
-  color: var(--fc-muted) !important; text-transform: uppercase; letter-spacing: .06em; font-size: .72rem !important;
-  white-space: normal !important; overflow: visible !important; text-overflow: unset !important;
+  color: var(--fc-muted) !important; text-transform: uppercase; letter-spacing: .06em;
+  font-size: .72rem !important; white-space: normal !important; overflow: visible !important;
+  text-overflow: unset !important;
 }}
 [data-testid="stMetricValue"] {{
-  font-family: 'Archivo', system-ui, sans-serif !important; color: var(--fc-ink) !important;
-  font-size: clamp(1.05rem, 1.6vw, 1.5rem) !important; white-space: normal !important;
-  overflow: visible !important; text-overflow: unset !important; word-break: break-word;
+  font-family: 'Archivo', system-ui, sans-serif !important;
+  font-size: clamp(1.05rem, 1.6vw, 1.5rem) !important;
+  white-space: normal !important; overflow: visible !important; text-overflow: unset !important;
+  word-break: break-word;
 }}
+
+/* ---------------- Containers ---------------- */
+[data-testid="stExpander"] {{ border-radius: 14px !important; }}
+[data-testid="stExpander"] summary {{ padding: .7rem .95rem !important; }}
+[data-testid="stDataFrame"], [data-testid="stDataEditor"] {{ border-radius: 12px !important; overflow: hidden; }}
+[data-testid="stAlertContainer"], .stAlert {{ border-radius: 12px !important; padding: .85rem 1rem !important; }}
+[data-testid="stPlotlyChart"] {{
+  border: 1px solid var(--fc-line) !important;
+  border-radius: 14px !important;
+  overflow: hidden;
+  padding: .35rem;
+}}
+
+/* ---------------- Icons ----------------
+   Material icons render as text, so they inherit colour automatically. This
+   only nudges optical alignment against adjacent text. */
+[data-testid="stIconMaterial"] {{ vertical-align: -.18em; }}
 
 /* ---------------- Inputs ---------------- */
-[data-testid="stTextInput"] input, [data-testid="stNumberInput"] input,
-[data-testid="stTextArea"] textarea, [data-baseweb="select"] > div,
-[data-testid="stFileUploaderDropzone"] {{
-  background: var(--fc-panel) !important;
-  color: var(--fc-ink) !important;
-  border: 1px solid var(--fc-line) !important;
-  border-radius: 10px !important;
-}}
-[data-testid="stTextInput"] input:focus, [data-testid="stNumberInput"] input:focus {{
-  border-color: var(--fc-mint) !important;
-  box-shadow: 0 0 0 3px var(--fc-mint-dim) !important;
-}}
 [data-testid="stWidgetLabel"] p {{ color: var(--fc-muted) !important; font-size: .85rem; }}
-
-/* ---------------- Toggle switch (dark/light control itself; also styles
-   any other st.toggle/st.checkbox in the app, e.g. "Remember me"-style
-   controls, for the same reason every other widget above is themed) ---- */
-[data-testid="stCheckbox"] label[data-selected="true"] > div:first-of-type {{
-  background: var(--fc-mint) !important;
-}}
-[data-testid="stCheckbox"] label[data-selected="true"] > div:first-of-type > div {{
-  background: var(--fc-mint-ink) !important;
-}}
-
-/* ---------------- Alerts ---------------- */
-[data-testid="stAlertContentInfo"], [data-testid="stNotification"][kind="info"] {{
-  background: var(--fc-mint-dim) !important; color: var(--fc-ink) !important; border: 1px solid var(--fc-mint-line) !important;
-}}
-[data-testid="stAlertContentSuccess"], [data-testid="stNotification"][kind="success"] {{
-  background: rgba(18,201,111,.12) !important; color: var(--fc-ink) !important; border: 1px solid rgba(18,201,111,.35) !important;
-}}
-[data-testid="stAlertContentWarning"], [data-testid="stNotification"][kind="warning"] {{
-  background: var(--fc-warning-dim) !important; color: var(--fc-ink) !important; border: 1px solid var(--fc-warning) !important;
-}}
-[data-testid="stAlertContentError"], [data-testid="stNotification"][kind="error"] {{
-  background: var(--fc-danger-dim) !important; color: var(--fc-ink) !important; border: 1px solid var(--fc-danger) !important;
-}}
-[data-testid="stAlertContainer"], .stAlert {{ border-radius: 12px !important; }}
-
-/* ---------------- Expander / containers / dataframe chrome ---------------- */
-[data-testid="stExpander"] {{
-  background: linear-gradient(180deg, var(--fc-panel), var(--fc-panel-2));
-  border: 1px solid var(--fc-line) !important;
-  border-radius: 14px !important;
-}}
-[data-testid="stDataFrame"], [data-testid="stDataEditor"] {{
-  border: 1px solid var(--fc-line) !important;
-  border-radius: 12px !important;
-  overflow: hidden;
-}}
-/* Chart panels stay on the brand's dark card treatment in both themes -
-   see apply_plotly_template()'s docstring for why - so the border reads
-   as an intentional dark-card frame, matching the landing page's own
-   dashboard preview, rather than a mismatched rectangle in light mode. */
-[data-testid="stPlotlyChart"] {{
-  border: 1px solid var(--fc-mint-line) !important;
-  border-radius: 14px !important;
-  overflow: hidden;
-  padding: 4px;
+[data-testid="stTextInput"] input:focus, [data-testid="stNumberInput"] input:focus {{
+  box-shadow: 0 0 0 3px var(--fc-accent-dim) !important;
 }}
 
 /* ---------------- Scrollbar ---------------- */
 ::-webkit-scrollbar {{ width: 10px; height: 10px; }}
 ::-webkit-scrollbar-track {{ background: transparent; }}
 ::-webkit-scrollbar-thumb {{ background: var(--fc-line); border-radius: 999px; }}
-::-webkit-scrollbar-thumb:hover {{ background: var(--fc-mint-line); }}
+::-webkit-scrollbar-thumb:hover {{ background: var(--fc-accent-line); }}
 </style>
 """, unsafe_allow_html=True)
 
 
 def apply_plotly_template(mode: ThemeMode | None = None) -> None:
-    """Registers and activates a brand plotly template so every chart in the
-    app (spending pie, income/expense bars, etc.) picks up the same palette
-    without each call site needing to know about theming.
+    """Registers and activates a brand Plotly template so every chart picks
+    up the palette without its call site knowing about theming.
 
-    Chart panels are deliberately always the DARK palette, regardless of
-    the active app theme - this is both a real platform constraint and,
-    on reflection, the right call: Streamlit's `st.plotly_chart` paints a
-    chart's outer background from the server's static `.streamlit/config.toml`
-    theme (`base = "dark"`) no matter what `paper_bgcolor` the figure itself
-    requests or whether `theme=None` is passed - confirmed by inspecting the
-    rendered `svg.main-svg` element's own inline style, which stays pinned
-    to the config file's `backgroundColor` across an in-session light/dark
-    toggle. Rather than fight a value Streamlit will silently overwrite,
-    charts keep the exact dark card treatment `UI/Financial Coach
-    Landing.dc.html`'s own dashboard preview already uses (that page has no
-    light variant at all) - so this reads as one deliberate brand choice
-    instead of a mismatched light-mode chart. `mode` still selects the
-    *data* colorway/gridlines below it, in case a future non-panel chart
-    (e.g. an inline sparkline on a light card) needs to opt out of the
-    dark-panel assumption."""
-    p = DARK
-    _ = mode  # kept in the signature for that future non-panel-chart case; unused today
+    Charts now follow the active mode. The earlier version pinned them to the
+    dark palette in both, because Streamlit's single static dark theme
+    overrode the figure's own background. With per-mode theming in
+    `config.toml` and `st.plotly_chart(..., theme=None)` at the call sites,
+    the figure's own colours are honoured and that workaround is obsolete."""
+    mode = mode or get_mode()
+    p = palette(mode)
     template = go.layout.Template()
     template.layout = go.Layout(
         paper_bgcolor=p["panel"],
         plot_bgcolor=p["panel"],
-        font=dict(family="Spline Sans, system-ui, sans-serif", color=p["ink"]),
-        colorway=[p["mint"], p["green"], p["warning"], p["danger"], p["muted"]],
+        font=dict(family="Spline Sans, system-ui, sans-serif", color=p["ink"], size=13),
+        colorway=[p["accent_text"], p["green"], p["warning"], p["danger"], p["muted"]],
         xaxis=dict(gridcolor=p["line"], zerolinecolor=p["line"], linecolor=p["line"]),
         yaxis=dict(gridcolor=p["line"], zerolinecolor=p["line"], linecolor=p["line"]),
         legend=dict(bgcolor="rgba(0,0,0,0)"),
-        margin=dict(t=30, r=10, b=10, l=10),
+        margin=dict(t=34, r=14, b=14, l=14),
     )
     pio.templates["financial_coach"] = template
     pio.templates.default = "financial_coach"

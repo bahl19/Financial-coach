@@ -82,9 +82,13 @@ def test_full_sample_path_works_offline_with_no_exception():
     # one st.tabs() call, so this checks both groups' labels are present
     # rather than a single flat count.
     tab_labels = [t.label for t in at.tabs]
+    # Labels carry Material icon directives (":material/x:") rather than
+    # emoji; AppTest reports the label with the directive still in it.
     for label in (
-        "\U0001f4ca Overview", "\U0001f9fe Spending", "\U0001f4b3 Debt Payoff", "\U0001f3e6 Savings",
-        "\U0001f4cb Budget", "\U0001f3af Goals", "\U0001f4ac Ask the Coach",
+        ":material/dashboard: Overview", ":material/receipt_long: Spending",
+        ":material/credit_card: Debt Payoff", ":material/account_balance: Savings",
+        ":material/list_alt: Budget", ":material/flag: Goals",
+        ":material/forum: Ask the Coach",
     ):
         assert label in tab_labels
     for label in (
@@ -220,8 +224,8 @@ def test_download_buttons_present_and_enabled_offline():
     at = _load_sample_and_analyze(_launch())
     assert not at.exception
     labels = [d.label for d in at.download_button]
-    assert "\U0001f4c4 Download report (Markdown)" in labels
-    assert "\U0001f4ca Download tracker (CSV)" in labels
+    assert "Download report (Markdown)" in labels
+    assert "Download tracker (CSV)" in labels
     assert not any(d.disabled for d in at.download_button)
 
 

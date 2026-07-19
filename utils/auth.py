@@ -71,6 +71,14 @@ def current_user_label() -> Optional[str]:
     return st.user.get("email") or st.user.get("name") or "signed in"
 
 
+
+def _check_icon(size: int = 16) -> str:
+    return (
+        f"<svg viewBox='0 0 24 24' aria-hidden='true' style='width:{size}px;height:{size}px'>"
+        "<path d='M4 12.5l5 5L20 7' fill='none' stroke='currentColor' stroke-width='2.2' "
+        "stroke-linecap='round' stroke-linejoin='round'/></svg>"
+    )
+
 def render_login_screen() -> None:
     """Renders a sign-in gate matching `UI/uploads/financial-coach-login.html`'s
     two-column brand layout (hero copy + feature checkmarks on the left,
@@ -84,17 +92,17 @@ def render_login_screen() -> None:
     do this centrally."""
     st.markdown(
         "<span style='display:inline-flex;align-items:center;gap:8px;font-size:11px;"
-        "letter-spacing:.24em;text-transform:uppercase;color:var(--fc-mint);"
-        "border:1px solid var(--fc-mint-line);background:var(--fc-mint-dim);"
+        "letter-spacing:.24em;text-transform:uppercase;color:var(--fc-accent);"
+        "border:1px solid var(--fc-accent-line);background:var(--fc-accent-dim);"
         "padding:7px 16px;border-radius:999px;margin-bottom:18px'>"
-        "✨ AI-powered financial analysis</span>",
+        "AI-powered financial analysis</span>",
         unsafe_allow_html=True,
     )
     left, right = st.columns([1.15, 1], gap="large")
     with left:
         st.markdown(
             "<h1 style='font-size:clamp(32px,4vw,50px);line-height:1.05;margin:0 0 18px'>"
-            "Stop the manual struggle.<br><span style='color:var(--fc-mint)'>Start coaching.</span></h1>",
+            "Stop the manual struggle.<br><span style='color:var(--fc-accent)'>Start coaching.</span></h1>",
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -107,7 +115,8 @@ def render_login_screen() -> None:
         for line in ("Personalized insights", "Trends spotted instantly", "A plan for your money, not just a summary"):
             st.markdown(
                 f"<div style='display:flex;align-items:center;gap:8px;color:var(--fc-muted);"
-                f"font-size:14px;margin-bottom:8px'><span style='color:var(--fc-mint)'>✓</span>{line}</div>",
+                f"font-size:14px;margin-bottom:10px'><span style='color:var(--fc-accent);display:inline-flex'>"
+                f"{_check_icon()}</span>{line}</div>",
                 unsafe_allow_html=True,
             )
     with right:

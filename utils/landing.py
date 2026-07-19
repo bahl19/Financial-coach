@@ -45,9 +45,9 @@ _SESSION_KEY = "landing_dismissed"
 _VIDEO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "UI", "assets", "app-demo.mp4")
 
 _STEPS = [
-    ("01", "⬆", "Upload", "Drop in a bank or card statement — CSV or PDF. It never leaves your session."),
-    ("02", "◎", "Analyze", "Every line is read and categorized, and your real patterns are surfaced."),
-    ("03", "✳", "Coach", "Get plain-language insights, trends, and the next best move for your money."),
+    ("01", "upload", "Upload", "Drop in a bank or card statement — CSV or PDF. It never leaves your session."),
+    ("02", "analyze", "Analyze", "Every line is read and categorized, and your real patterns are surfaced."),
+    ("03", "coach", "Coach", "Get plain-language insights, trends, and the next best move for your money."),
 ]
 
 _FEATURES = [
@@ -83,19 +83,19 @@ def _inject_landing_css() -> None:
 .fc-badge {
   display:inline-flex; align-items:center; gap:10px;
   font-size:11px; letter-spacing:.26em; text-transform:uppercase;
-  color:var(--fc-mint); border:1px solid var(--fc-mint-line); background:var(--fc-mint-dim);
+  color:var(--fc-accent); border:1px solid var(--fc-accent-line); background:var(--fc-accent-dim);
   padding:9px 18px; border-radius:999px; margin-bottom:26px;
 }
 .fc-badge::before {
   content:''; width:6px; height:6px; border-radius:50%;
-  background:var(--fc-mint); box-shadow:0 0 10px var(--fc-mint);
+  background:var(--fc-accent); box-shadow:0 0 10px var(--fc-accent);
   animation:fc-pulse 2.4s ease-in-out infinite;
 }
 .fc-hero-h1 {
   font-family:'Archivo',system-ui,sans-serif; font-weight:800; text-transform:uppercase;
   font-size:clamp(38px,6vw,82px); line-height:.98; letter-spacing:.01em; margin:0 0 24px;
 }
-.fc-hero-h1 .accent { color:var(--fc-mint); }
+.fc-hero-h1 .accent { color:var(--fc-accent); }
 .fc-hero-sub {
   font-size:clamp(16px,1.6vw,20px); font-weight:300; line-height:1.6;
   color:var(--fc-muted); max-width:52ch; margin:0 auto 8px;
@@ -113,7 +113,7 @@ def _inject_landing_css() -> None:
 }
 
 .fc-eyebrow {
-  font-size:11px; letter-spacing:.26em; text-transform:uppercase; color:var(--fc-mint);
+  font-size:11px; letter-spacing:.26em; text-transform:uppercase; color:var(--fc-accent);
 }
 .fc-h2 {
   font-family:'Archivo',system-ui,sans-serif; font-weight:800; text-transform:uppercase;
@@ -127,12 +127,12 @@ def _inject_landing_css() -> None:
 }
 .fc-card-no {
   position:absolute; top:10px; right:20px; line-height:1;
-  font-family:'Archivo',system-ui,sans-serif; font-weight:800; font-size:56px; color:var(--fc-mint-dim);
+  font-family:'Archivo',system-ui,sans-serif; font-weight:800; font-size:56px; color:var(--fc-accent-dim);
 }
 .fc-card-icon {
-  width:44px; height:44px; border-radius:12px; background:var(--fc-mint-dim);
-  border:1px solid var(--fc-mint-line); display:flex; align-items:center; justify-content:center;
-  margin-bottom:18px; color:var(--fc-mint); font-size:18px;
+  width:44px; height:44px; border-radius:12px; background:var(--fc-accent-dim);
+  border:1px solid var(--fc-accent-line); display:flex; align-items:center; justify-content:center;
+  margin-bottom:18px; color:var(--fc-accent); font-size:18px;
 }
 .fc-card h3 {
   font-family:'Archivo',system-ui,sans-serif; font-weight:700; text-transform:uppercase;
@@ -142,12 +142,12 @@ def _inject_landing_css() -> None:
 
 .fc-bars { display:flex; align-items:flex-end; justify-content:center; gap:8px; height:84px; margin-bottom:20px; }
 .fc-bars i {
-  width:14px; background:var(--fc-mint); border-radius:4px 4px 0 0; display:block;
+  width:14px; background:var(--fc-accent); border-radius:4px 4px 0 0; display:block;
   box-shadow:0 0 16px rgba(94,243,206,.35);
 }
 
 .fc-final {
-  position:relative; overflow:hidden; border-radius:24px; border:1px solid var(--fc-mint-line);
+  position:relative; overflow:hidden; border-radius:24px; border:1px solid var(--fc-accent-line);
   background:linear-gradient(160deg,var(--fc-panel),var(--fc-bg));
   padding:64px 40px; text-align:center; margin-top:8px;
 }
@@ -155,7 +155,7 @@ def _inject_landing_css() -> None:
   font-family:'Archivo',system-ui,sans-serif; font-weight:800; text-transform:uppercase;
   font-size:clamp(28px,4.6vw,58px); line-height:1; margin:0; color:var(--fc-ink);
 }
-.fc-final h2 .accent { color:var(--fc-mint); }
+.fc-final h2 .accent { color:var(--fc-accent); }
 .fc-final p { margin:18px auto 0; font-size:17px; color:var(--fc-muted); font-weight:300; max-width:44ch; }
 
 .fc-foot {
@@ -166,6 +166,25 @@ def _inject_landing_css() -> None:
 </style>
 """, unsafe_allow_html=True)
 
+
+
+def _icon(name: str, size: int = 20) -> str:
+    """Minimal stroke icons drawn with `currentColor`, so they take the
+    accent colour of whichever theme is active. Emoji were replaced because
+    they ignore the palette entirely, render differently per platform, and
+    are read out literally by screen readers."""
+    paths = {
+        "upload": "<path d='M12 16V4'/><path d='M7 9l5-5 5 5'/><path d='M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2'/>",
+        "analyze": "<circle cx='12' cy='12' r='7'/><circle cx='12' cy='12' r='2.5'/>",
+        "coach": "<path d='M12 4v16'/><path d='M4 12h16'/><path d='M6.5 6.5l11 11'/><path d='M17.5 6.5l-11 11'/>",
+        "check": "<path d='M4 12.5l5 5L20 7'/>",
+        "spark": "<path d='M12 3v18'/><path d='M3 12h18'/><path d='M6.8 6.8l10.4 10.4'/><path d='M17.2 6.8L6.8 17.2'/>",
+    }
+    return (
+        f"<svg viewBox='0 0 24 24' aria-hidden='true' style='width:{size}px;height:{size}px;flex:none'>"
+        f"<g fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' "
+        f"stroke-linejoin='round'>{paths[name]}</g></svg>"
+    )
 
 def _logo_svg(size: int = 30) -> str:
     return (
@@ -183,7 +202,7 @@ def render_landing_page() -> bool:
     _inject_landing_css()
 
     st.markdown(
-        f"<div style='display:flex;align-items:center;gap:12px;color:var(--fc-mint);margin-bottom:34px'>"
+        f"<div style='display:flex;align-items:center;gap:12px;color:var(--fc-accent);margin-bottom:34px'>"
         f"{_logo_svg()}"
         "<span style=\"font-family:'Archivo',system-ui,sans-serif;font-weight:700;letter-spacing:.3em;"
         "font-size:12px;text-transform:uppercase;color:var(--fc-ink)\">Financial&nbsp;Coach</span></div>",
@@ -234,7 +253,7 @@ def render_landing_page() -> bool:
     for col, (no, icon, title, body) in zip(st.columns(3, gap="medium"), _STEPS):
         col.markdown(
             f"<div class='fc-card'><div class='fc-card-no'>{no}</div>"
-            f"<div class='fc-card-icon'>{icon}</div>"
+            f"<div class='fc-card-icon'>{_icon(icon)}</div>"
             f"<h3>{title}</h3><p>{body}</p></div>",
             unsafe_allow_html=True,
         )

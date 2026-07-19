@@ -38,11 +38,11 @@ from utils.contracts import default_assumptions, validate_profile
 from utils.currency import CURRENCY_SYMBOLS, currency_symbol, format_money
 from utils.llm import is_live
 
-st.set_page_config(page_title="AI Financial Coach", page_icon="\U0001f4b0", layout="wide")
+st.set_page_config(page_title="AI Financial Coach", page_icon=":material/savings:", layout="wide")
 
-theme.render_theme_toggle()
 theme.inject_theme_css()
 theme.apply_plotly_template()
+theme.render_theme_hint()
 
 # The one canonical entry journey: landing page -> Logto sign-in -> the app.
 # Each stage renders and then stops, so no gated content below ever executes
@@ -181,7 +181,22 @@ def _suggest_average_monthly_expenses(categorized_df: pd.DataFrame) -> float:
 # invent no new label and change no finding/risk/trend/action's own fields;
 # the downloadable report (utils.reporting) still shows the raw IDs
 # alongside every title for anyone who wants exact traceability.
-_SEVERITY_ICON = {"critical": "\U0001f534", "high": "\U0001f7e0", "medium": "\U0001f7e1", "low": "⚪", "positive": "\U0001f7e2"}
+# Severity is shown as one mono glyph tinted from the theme palette, rather
+# than a multi-colour emoji: emoji ignore the active theme, render
+# inconsistently across platforms, and are announced verbatim by screen
+# readers. The colour carries the same meaning in both themes because each
+# token is defined per-theme in utils/theme.py.
+_SEVERITY_COLOR_VAR = {
+    "critical": "--fc-danger", "high": "--fc-danger", "medium": "--fc-warning",
+    "low": "--fc-muted", "positive": "--fc-accent",
+}
+
+
+def _severity_dot(severity: str) -> str:
+    var = _SEVERITY_COLOR_VAR.get(severity)
+    if var is None:
+        return ""
+    return f"<span title='{severity}' style='color:var({var});font-size:.8em'>&#9679;</span>"
 
 
 def _id_label_maps(findings: list, risks: list, trends: list, roadmap: dict) -> tuple:
@@ -221,9 +236,13 @@ app_state.init_state()
 
 # ---------------------------------------------------------------- sidebar --
 with st.sidebar:
-    st.title("\U0001f4b0 AI Financial Coach")
+    st.title("AI Financial Coach")
     st.caption("Your AI-powered money coach — plain-language insights, not just numbers.")
-    st.markdown(f"**Coach status:** {'\U0001f7e2 Live, powered by OpenRouter' if is_live() else '\U0001f7e1 Offline mode — smart rule-based guidance'}")
+    st.markdown(
+        "**Coach status:** "
+        + (":material/bolt: Live, powered by OpenRouter" if is_live()
+           else ":material/cloud_off: Offline mode — smart rule-based guidance")
+    )
     if not is_live():
         st.caption("Add OPENROUTER_API_KEY to your .env for richer, AI-generated narratives.")
 
@@ -242,11 +261,11 @@ with st.sidebar:
         st.success("Sample data loaded.")
 
 # ------------------------------------------------------------------- main --
-st.title("\U0001f4b0 AI Financial Coach")
+st.title("AI Financial Coach")
 
 raw_transactions = app_state.get_raw_transactions()
 if raw_transactions is None:
-    st.info("\U0001f448 Load our sample data or upload your own statement in the sidebar to see your coach in action.")
+    st.info("Load our sample data or upload your own statement in the sidebar to see your coach in action.", icon=":material/west:")
     st.caption("CSV format: columns `date`, `description`, `amount` -- expenses negative, income/deposits positive.")
     st.stop()
 
@@ -432,7 +451,7 @@ if validation_issues:
     st.error("Fix the following before running analysis:\n" + "\n".join(f"- {issue}" for issue in validation_issues))
 
 analyze_clicked = st.button(
-    "\U0001f680 Confirm & run analysis", type="primary", disabled=bool(validation_issues), key="analyze_button",
+    "Confirm & run analysis", type="primary", disabled=bool(validation_issues), key="analyze_button",
 )
 if analyze_clicked and not validation_issues:
     with st.spinner("Running the deterministic pipeline and specialist agents..."):
@@ -455,13 +474,15 @@ st.header("Step 4 - Analysis")
 
 if validation_result.get("fallback_used"):
     st.warning(
-        "⚠️ One or more specialist narratives failed a consistency check and were replaced with a "
-        "deterministic, rule-based explanation instead. Nothing about your numbers changed - only the wording."
+        "One or more specialist narratives failed a consistency check and were replaced with a "
+        "deterministic, rule-based explanation instead. Nothing about your numbers changed - only the wording.",
+        icon=":material/warning:"
     )
 
 tabs = st.tabs([
-    "\U0001f4ca Overview", "\U0001f9fe Spending", "\U0001f4b3 Debt Payoff", "\U0001f3e6 Savings",
-    "\U0001f4cb Budget", "\U0001f3af Goals", "\U0001f4ac Ask the Coach",
+    ":material/dashboard: Overview", ":material/receipt_long: Spending", ":material/credit_card: Debt Payoff",
+    ":material/account_balance: Savings", ":material/list_alt: Budget", ":material/flag: Goals",
+    ":material/forum: Ask the Coach",
 ])
 
 # --- Overview -----------------------------------------------------------
@@ -477,13 +498,13 @@ with tabs[0]:
     data_quality_flags = snapshot.get("data_quality_flags") or []
     if data_quality_flags:
         with st.container(border=True):
-            st.markdown("**⚠️ Data limitations affecting these numbers:**")
+            st.markdown("**:material/warning: Data limitations affecting these numbers:**")
             for flag in data_quality_flags:
                 st.markdown(f"- {flag['detail']}")
 
     finding_titles, risk_labels, trend_labels, action_titles = _id_label_maps(findings, risks, trends, roadmap)
 
-    st.subheader("\U0001f9ed Coach summary")
+    st.subheader("Coach summary")
     st.markdown(f"**Overall health:** {coach_summary['overall_health']}")
     st.markdown("**Top priorities:** " + _humanize_ids(coach_summary["top_priorities"], action_titles))
     st.markdown("**Critical risks:** " + _humanize_ids(coach_summary["critical_risks"], risk_labels))
@@ -491,16 +512,17 @@ with tabs[0]:
     st.markdown("**Positive changes:** " + _humanize_ids(coach_summary["positive_changes"], finding_titles))
     st.caption(coach_summary["assumptions_and_limitations"])
 
-    st.subheader("\U0001f6e3️ Roadmap")
+    st.subheader("Roadmap")
     st.caption(
         f"Buffer reserved (planning constraint, not a distributed transfer): "
         f"{format_money(roadmap['allocation']['buffer_reserved'], currency, 2)}"
     )
     for action in sorted(roadmap["actions"], key=lambda a: a["priority"]):
-        icon = _SEVERITY_ICON.get(action["severity"], "")
+        icon = _severity_dot(action["severity"])
         st.markdown(
             f"{action['priority']}. {icon} **{action['title']}** ({action['timeframe']}): "
-            f"{format_money(action['monthly_amount'], currency, 2)}/mo"
+            f"{format_money(action['monthly_amount'], currency, 2)}/mo",
+            unsafe_allow_html=True,
         )
         st.caption(action["rationale"])
 
@@ -561,7 +583,7 @@ with tabs[5]:
 
 # --- Chat ----------------------------------------------------------------------
 with tabs[6]:
-    st.subheader("\U0001f4ac Ask the Coach")
+    st.subheader("Ask the Coach")
     st.caption("Ask about your debt, savings, budget, spending, or goals - answers are drawn from the same analysis above, not a separate agent call.")
     for role, msg in app_state.get_chat_history():
         with st.chat_message(role):
@@ -743,7 +765,7 @@ st.header("Step 6 - Download your report")
 report_package = rp.build_report(profile, snapshot, trends, findings, risks, roadmap, coach_summary)
 dl1, dl2 = st.columns(2)
 dl1.download_button(
-    "\U0001f4c4 Download report (Markdown)", data=report_package["report_markdown"],
+    "Download report (Markdown)", icon=":material/description:", data=report_package["report_markdown"],
     file_name=f"{report_package['filename_stem']}.md", mime="text/markdown",
 )
 _TRACKER_COLUMN_LABELS = {
@@ -753,6 +775,6 @@ _TRACKER_COLUMN_LABELS = {
 }
 tracker_csv = pd.DataFrame(report_package["tracker_rows"]).rename(columns=_TRACKER_COLUMN_LABELS).to_csv(index=False)
 dl2.download_button(
-    "\U0001f4ca Download tracker (CSV)", data=tracker_csv,
+    "Download tracker (CSV)", icon=":material/table_view:", data=tracker_csv,
     file_name=f"{report_package['filename_stem']}_tracker.csv", mime="text/csv",
 )
