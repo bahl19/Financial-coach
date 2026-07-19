@@ -58,11 +58,18 @@ if not landing.was_dismissed() and not authn.is_logged_in():
         st.rerun()
     st.stop()
 
-# Stage 2. Skipped entirely when auth is not configured (no [auth] section in
-# .streamlit/secrets.toml) - the same "missing config disables the feature,
-# never crashes" rule utils/auth.py already follows for OPENROUTER_API_KEY.
-if authn.auth_enabled() and not authn.is_logged_in():
-    authn.render_login_screen()
+# Stage 2. Sign-in fails CLOSED: if [auth] is not configured, the app stops
+# with an explanatory screen rather than serving itself to everyone. Skipping
+# it is opt-in via FC_ALLOW_ANONYMOUS (see utils/auth.py) so local dev and CI
+# still run credential-free - unlike OPENROUTER_API_KEY, whose absence only
+# costs narrative quality, a missing auth secret is a security boundary and
+# must not disappear silently.
+if authn.auth_enabled():
+    if not authn.is_logged_in():
+        authn.render_login_screen()
+        st.stop()
+elif not authn.anonymous_access_allowed():
+    authn.render_auth_not_configured_screen()
     st.stop()
 authn.render_signed_in_sidebar_control()
 

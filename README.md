@@ -54,7 +54,9 @@ To require sign-in (via [Logto](https://logto.io)): copy `.streamlit/secrets.tom
 
 Sign-in needs Authlib (`Authlib>=1.3.2`, already in `requirements.txt`). If you have an older virtualenv, `pip install -r requirements.txt` again — without it, `st.login()` raises at click time even though everything else looks configured.
 
-Leave the file absent, or without an `[auth]` section, to keep sign-in disabled.
+**Sign-in fails closed.** With no `[auth]` block configured the app stops on an explanatory screen rather than serving itself to everyone — a missing auth secret is a security boundary, not a downgrade. To run locally without configuring sign-in, set `FC_ALLOW_ANONYMOUS=true` in your `.env` (see `.env.example`). Never set that on a public deployment.
+
+**Deploying:** set the same `[auth]` block in Streamlit Community Cloud → your app → *Settings* → *Secrets*, with `redirect_uri` pointing at your deployed URL's `/oauth2callback` path.
 
 ### 4. Run the app
 ```bash

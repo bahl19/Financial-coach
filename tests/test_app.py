@@ -35,8 +35,13 @@ def _auth_disabled_unless_a_test_says_otherwise(monkeypatch):
     sign-in locally is a normal thing to do, so it must not turn the suite
     red. Tests that exercise the authenticated path monkeypatch
     `auth_enabled` back on in their own body, which runs after this fixture
-    and therefore wins."""
+    and therefore wins.
+
+    `FC_ALLOW_ANONYMOUS` is set for the same reason: sign-in now fails
+    closed when unconfigured, so without this every test would land on the
+    "sign-in isn't configured" screen instead of the app."""
     monkeypatch.setattr(authn, "auth_enabled", lambda: False)
+    monkeypatch.setenv("FC_ALLOW_ANONYMOUS", "true")
 
 
 def _launch(**kwargs) -> AppTest:
@@ -456,3 +461,34 @@ def test_signed_in_visitor_skips_the_landing_page(monkeypatch):
     assert not at.exception
     assert not any(b.key == landing.CTA_KEY for b in at.button)
     assert any(b.key == "load_sample_button" for b in at.sidebar.button)
+
+
+def test_app_fails_closed_when_sign_in_is_unconfigured_and_not_waived(monkeypatch):
+    """The defect this guards against: a deployment whose [auth] secrets are
+    missing previously served the entire app to every visitor, silently.
+    Unsetting a secret must never quietly remove an authentication
+    requirement - it now stops with an explanatory screen instead."""
+    monkeypatch.setattr(authn, "auth_enabled", lambda: False)
+    monkeypatch.delenv("FC_ALLOW_ANONYMOUS", raising=False)
+
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+    at.button(key=landing.CTA_KEY).click().run()
+
+    assert not at.exception
+    assert any("Sign-in isn't configured" in t.value for t in at.title)
+    # The app itself must not have rendered behind that screen.
+    assert not any(b.key == "load_sample_button" for b in at.sidebar.button)
+
+
+def test_anonymous_access_requires_an_explicit_opt_in(monkeypatch):
+    """Only deliberate, recognised values open the app; a stray or empty
+    value must not be read as consent."""
+    for value in ("true", "TRUE", "1", "yes", "on"):
+        monkeypatch.setenv("FC_ALLOW_ANONYMOUS", value)
+        assert authn.anonymous_access_allowed() is True, value
+    for value in ("", "false", "0", "no", "maybe"):
+        monkeypatch.setenv("FC_ALLOW_ANONYMOUS", value)
+        assert authn.anonymous_access_allowed() is False, value
+    monkeypatch.delenv("FC_ALLOW_ANONYMOUS", raising=False)
+    assert authn.anonymous_access_allowed() is False

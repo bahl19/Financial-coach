@@ -19,9 +19,12 @@ disabled there, exactly like offline mode is for the LLM.
 
 from __future__ import annotations
 
+import os
 from typing import Optional
 
 import streamlit as st
+
+_ANONYMOUS_ENV_VAR = "FC_ALLOW_ANONYMOUS"
 
 
 def auth_enabled() -> bool:
@@ -33,6 +36,25 @@ def auth_enabled() -> bool:
         return "auth" in st.secrets
     except Exception:
         return False
+
+
+def anonymous_access_allowed() -> bool:
+    """Whether running with sign-in unconfigured is an explicit, deliberate
+    choice rather than an accident.
+
+    This exists because the previous behaviour - silently serving the whole
+    app to everyone whenever `[auth]` happened to be missing - is the wrong
+    default for something handling financial data. A misconfigured deploy
+    looked identical to a correctly-configured open one, and the only
+    symptom was the absence of a screen. Unsetting a secret should never
+    quietly remove an authentication requirement.
+
+    So anonymous access is now opt-in: set `FC_ALLOW_ANONYMOUS=true` (in
+    `.env` for local development, in the CI job for tests). A deployment
+    that forgets its `[auth]` secrets fails closed with an explanatory
+    screen instead of opening the front door.
+    """
+    return os.environ.get(_ANONYMOUS_ENV_VAR, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def is_logged_in() -> bool:
@@ -95,6 +117,27 @@ def render_login_screen() -> None:
             if st.button("Sign in", type="primary", key="auth_sign_in_button", width="stretch"):
                 st.login()
             st.caption("New here? Signing in creates your account automatically — no separate sign-up.")
+
+
+def render_auth_not_configured_screen() -> None:
+    """Shown when sign-in is neither configured nor explicitly waived. The
+    caller must `st.stop()` straight after, so the app stays closed."""
+    st.title("Sign-in isn't configured")
+    st.error(
+        "This deployment requires sign-in, but no `[auth]` credentials are configured — "
+        "so it has stopped rather than serving your financial data to anyone who visits."
+    )
+    st.markdown(
+        "**To fix, set the `[auth]` block in your deployment's secrets** "
+        "(Streamlit Community Cloud → your app → *Settings* → *Secrets*), using "
+        "`.streamlit/secrets.toml.example` as the template. Make sure `redirect_uri` "
+        "matches the deployed URL's `/oauth2callback` path, and keep the "
+        "`client_kwargs = { prompt = \"login\" }` line — Logto rejects Streamlit's default prompt."
+    )
+    st.caption(
+        "Running locally and want to skip sign-in on purpose? Set `FC_ALLOW_ANONYMOUS=true` "
+        "in your `.env` (see `.env.example`)."
+    )
 
 
 def render_signed_in_sidebar_control() -> None:
