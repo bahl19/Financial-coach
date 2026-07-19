@@ -36,7 +36,7 @@ from utils import reporting as rp
 from utils import scenarios as sc
 from utils.contracts import default_assumptions, validate_profile
 from utils.currency import CURRENCY_SYMBOLS, currency_symbol, format_money
-from utils.llm import is_live
+from utils.llm import is_live, last_error, model_name
 
 st.set_page_config(page_title="AI Financial Coach", page_icon=":material/savings:", layout="wide")
 
@@ -240,9 +240,19 @@ with st.sidebar:
     st.caption("Your AI-powered money coach — plain-language insights, not just numbers.")
     st.markdown(
         "**Coach status:** "
-        + (":material/bolt: Live, powered by OpenRouter" if is_live()
+        + (f":material/bolt: Live — {model_name()}" if is_live()
            else ":material/cloud_off: Offline mode — smart rule-based guidance")
     )
+    # A configured-but-failing key used to be indistinguishable from no key at
+    # all: both produced templated narratives with nothing to explain why.
+    # utils/llm.py now records the reason; surface it rather than leaving the
+    # user to guess (the message never contains the key or any prompt text).
+    _llm_error = last_error()
+    if is_live() and _llm_error:
+        st.warning(
+            f"The last model call failed, so narratives fell back to rule-based text.\n\n`{_llm_error}`",
+            icon=":material/error:",
+        )
     if not is_live():
         st.caption("Add OPENROUTER_API_KEY to your .env for richer, AI-generated narratives.")
 

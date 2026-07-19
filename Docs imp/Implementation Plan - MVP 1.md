@@ -652,3 +652,18 @@ Requested by the user: "by default use dark theme only."
 **Nothing was thrown away.** The contrast-checked `LIGHT` palette and its measured ratios remain in `utils/theme.py`, and `config.toml` records the exact values to restore. Light mode is two coordinated changes away - `_FORCE_MODE = None` plus the light values under `[theme]` - and the comments in both files say so, because changing only one of the two would reintroduce precisely the widget/CSS split that caused the original bug.
 
 **Verification:** 441 passed, 4 skipped; `ruff` and `mypy` clean. Browser-verified by driving Chromium with `color_scheme` set to **light** and confirming `.stApp` still computes to `rgb(8, 21, 39)` (`#081527`) on both the landing and in-app screens - i.e. a light-preferring visitor gets the dark theme.
+
+### 2026-07-19 — Made LLM fallback reasons visible instead of silent
+
+Asked by the user why the agents were not producing model-generated output despite an OpenRouter key being configured. Investigation found the agents *were* calling the model correctly - instrumenting a full pipeline run showed six `complete()` invocations, one per specialist plus the roadmap narrative - but every result carried `live = False` and every narrative was the rule-based fallback.
+
+**The real defect was observability, not orchestration.** `utils/llm.py` ended `complete()` with a bare `except Exception: return None` and no logging. That made four completely different situations indistinguishable from each other and from normal offline operation: no key configured, an invalid key, an account without credits, and a model the account cannot access. In every case the app quietly served templated text with nothing - not a log line, not a UI hint - to say why. This is the same class of defect as the silent authentication fallback fixed earlier the same day: a graceful degradation path that hides the failure it is degrading from.
+
+**Two concrete bugs found alongside it:**
+
+1. `_MODEL` was evaluated at *import* time. Streamlit promotes top-level secrets into `os.environ` only when `st.secrets` is first accessed, which happens after this module is imported - so an `OPENROUTER_MODEL` set through Streamlit secrets was silently ignored and the default used instead. Both the model and the key are now read lazily.
+2. Streamlit promotes only **top-level scalar** secrets to the environment (`_maybe_set_environment_variable` accepts `str`/`int`/`float`). A key placed after a `[section]` header belongs to that table, is a dict member, and is never promoted. Verified empirically: with `OPENROUTER_API_KEY` as a top-level line the running app's sidebar reads "Live"; nested, it reads "Offline". The no-key error message now states this explicitly, since it is the most likely misconfiguration.
+
+**Fix:** failures are logged with their reason (never the key, and never the prompt, which carries the user's financial figures) and retained in `last_error()`. `app.py`'s sidebar shows the model name when live, and surfaces the failure reason when a key is configured but calls are failing. Behaviour is deliberately unchanged - callers still receive `None` and still fall back to rule-based narratives - only the silence is gone.
+
+**Verification:** 441 passed, 4 skipped; `ruff` and `mypy` clean. Both paths exercised directly: with no key, `is_live()` is False and the reason names the top-level-placement requirement; with an invalid key, `is_live()` is True, `complete()` returns None, and the reason reads `AuthenticationError: Error code: 401 ... User not found.` - which previously produced no output at all.
