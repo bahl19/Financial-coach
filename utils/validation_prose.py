@@ -18,7 +18,7 @@ from typing import List
 
 import pandas as pd
 
-_DOLLAR_PATTERN = re.compile(r"₹([\d,]+(?:\.\d+)?)")  # matches ₹ (not $) - see Phase-11-era currency switch to INR
+_DOLLAR_PATTERN = re.compile(r"[₹$]([\d,]+(?:\.\d+)?)")  # matches either symbol - a profile's currency setting (utils/currency.py) picks which one narratives actually use; this check doesn't need to know which
 _PERCENT_PATTERN = re.compile(r"(-?\d+(?:\.\d+)?)\s*%")
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 _INCOME_EXPENSE_SURPLUS_KEYWORDS = ("income", "expense", "surplus")

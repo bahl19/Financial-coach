@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from utils.contracts import Finding, FinancialProfile, FinancialSnapshot, Risk, Roadmap
+from utils.currency import format_money
 from utils.finance_calc import goal_feasibility
 from utils.llm import complete
 
@@ -126,6 +127,7 @@ def build_roadmap(
     metrics = snapshot["metrics"]
     validation_issues = snapshot.get("validation_issues") or []
     allocatable_surplus = metrics.get("allocatable_surplus")
+    currency = (profile.get("assumptions") or {}).get("currency")
 
     if validation_issues or allocatable_surplus is None:
         return _unresolved_inputs_roadmap(profile, validation_issues, allocatable_surplus)
@@ -206,8 +208,8 @@ def build_roadmap(
             "This month" if underfunded else "Next 90 days",
             f"Fund goal: {goal['name']}",
             (
-                f"Contributing ₹{amount:,.0f}/month toward {goal['name']}, short of the "
-                f"₹{feasibility['required_monthly']:,.0f}/month required to stay on track."
+                f"Contributing {format_money(amount, currency)}/month toward {goal['name']}, short of the "
+                f"{format_money(feasibility['required_monthly'], currency)}/month required to stay on track."
             ) if underfunded else f"Contributing toward {goal['name']} at the required monthly pace.",
             amount, ["allocatable_surplus"], [], _risk_ids_of_category(risks, "goals"),
         ))
@@ -283,11 +285,12 @@ _ROADMAP_SYSTEM_PROMPT = (
 def _fallback_roadmap_narrative(roadmap: Roadmap) -> str:
     if not roadmap["actions"]:
         return "No monetary allocation is possible until required inputs are resolved."
+    currency = (roadmap.get("assumptions_used") or {}).get("currency")
     lines = ["**Your Prioritized Roadmap (offline rule-based mode)**"]
     for action in roadmap["actions"]:
         lines.append(
             f"{action['priority']}. **{action['title']}** ({action['timeframe']}): "
-            f"₹{action['monthly_amount']:,.0f}/mo — {action['rationale']}"
+            f"{format_money(action['monthly_amount'], currency)}/mo — {action['rationale']}"
         )
     return "\n".join(lines)
 
@@ -296,8 +299,9 @@ def explain_roadmap(roadmap: Roadmap, snapshot: FinancialSnapshot) -> str:
     if not roadmap["actions"]:
         return _fallback_roadmap_narrative(roadmap)
 
+    currency = (roadmap.get("assumptions_used") or {}).get("currency")
     summary_lines = [
-        f"{a['priority']}. {a['title']} - ₹{a['monthly_amount']:,.0f}/mo ({a['timeframe']}): {a['rationale']}"
+        f"{a['priority']}. {a['title']} - {format_money(a['monthly_amount'], currency)}/mo ({a['timeframe']}): {a['rationale']}"
         for a in roadmap["actions"]
     ]
     summary = "Action plan:\n" + "\n".join(summary_lines)

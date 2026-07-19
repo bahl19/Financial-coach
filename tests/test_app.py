@@ -134,6 +134,53 @@ def test_editing_a_review_category_changes_spending_by_category_output():
 
 
 # --------------------------------------------------------------------------
+# Currency/region selectors: independent settings added alongside the
+# original INR-only, India-only defaults - "india"/"INR" must remain the
+# unchanged default, and switching either must actually take effect.
+# --------------------------------------------------------------------------
+
+def test_currency_selector_changes_the_rendered_money_symbol():
+    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    assert not at.exception
+    overview_metrics = {m.label: m.value for m in at.metric}
+    assert overview_metrics["Gross surplus"].startswith("₹")  # default currency is INR
+
+    # Switching currency changes assumptions, which invalidates the last
+    # analysis (utils/app_state.py's set_profile_fields) - re-confirm, same
+    # as a real user would after changing any Step 3 input.
+    at.selectbox(key="currency_select").select("USD").run()
+    at.button(key="analyze_button").click().run()
+    assert not at.exception
+    overview_metrics = {m.label: m.value for m in at.metric}
+    assert overview_metrics["Gross surplus"].startswith("$")
+    assert "₹" not in overview_metrics["Gross surplus"]
+
+
+def test_region_selector_changes_categorization_of_india_vendor_transactions():
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+    at.sidebar.button(key="load_sample_button").click().run()
+    assert not at.exception
+
+    india_default_df = at.session_state["categorized_df"]
+    swiggy_row = india_default_df[india_default_df["description"] == "Swiggy Order"].iloc[0]
+    assert swiggy_row["category"] == "Dining"  # india is the default region
+
+    at.selectbox(key="region_select").select("generic").run()
+    assert not at.exception
+    generic_df = at.session_state["categorized_df"]
+    swiggy_row_generic = generic_df[generic_df["description"] == "Swiggy Order"].iloc[0]
+    assert swiggy_row_generic["category"] == "Other"
+    # needs_review is False here, not True: rendering the review editor for
+    # the first time (triggered by these rows newly needing review) round-
+    # trips through apply_category_corrections() even unedited, which always
+    # finalizes at confidence 1.0 - the same behavior
+    # test_editing_a_review_category_changes_spending_by_category_output
+    # exercises directly. The real proof region took effect is the category
+    # itself flipping to "Other".
+
+
+# --------------------------------------------------------------------------
 # Gate: "Download buttons work in offline mode (no OpenRouter key)"
 # --------------------------------------------------------------------------
 

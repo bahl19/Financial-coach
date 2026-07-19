@@ -82,7 +82,8 @@ def _find_action_for_goal(roadmap: dict, goal_name: str) -> Optional[dict]:
 
 def spending_node(state: GraphState) -> dict:
     transactions_df = fc._transactions_to_frame(state["profile"].get("transactions") or [])
-    return {"spending_result": SpendingAnalyzerAgent().run(transactions=transactions_df)}
+    currency = (state["profile"].get("assumptions") or {}).get("currency")
+    return {"spending_result": SpendingAnalyzerAgent().run(transactions=transactions_df, currency=currency)}
 
 
 def roadmap_node(state: GraphState) -> dict:
@@ -120,6 +121,7 @@ def savings_node(state: GraphState) -> dict:
         investment_cagr=assumptions.get("investment_cagr"),
         action_id=action["action_id"] if action else None,
         finding_refs=action["finding_refs"] if action else [],
+        currency=assumptions.get("currency"),
     )
     return {"savings_result": result}
 
@@ -127,11 +129,13 @@ def savings_node(state: GraphState) -> dict:
 def debt_node(state: GraphState) -> dict:
     roadmap = state["roadmap_result"]
     action = _find_action_by_id(roadmap, rm.ACTION_ACCELERATE_DEBT)
+    currency = (state["profile"].get("assumptions") or {}).get("currency")
     result = DebtAnalyzerAgent().run(
         debts=state["profile"].get("debts") or [],
         extra_debt_payment=roadmap["allocation"]["debt_extra_payment"],
         action_id=action["action_id"] if action else None,
         finding_refs=action["finding_refs"] if action else [],
+        currency=currency,
     )
     return {"debt_result": result}
 
@@ -145,11 +149,13 @@ def goal_node(state: GraphState) -> dict:
         if action:
             action_ids_by_goal[goal["name"]] = action["action_id"]
             finding_refs_by_goal[goal["name"]] = action["finding_refs"]
+    currency = (state["profile"].get("assumptions") or {}).get("currency")
     result = GoalPlannerAgent().run(
         goals=goals,
         goal_contributions=roadmap["allocation"]["goal_contributions"],
         action_ids_by_goal=action_ids_by_goal,
         finding_refs_by_goal=finding_refs_by_goal,
+        currency=currency,
     )
     return {"goal_result": result}
 

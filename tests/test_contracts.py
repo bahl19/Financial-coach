@@ -138,6 +138,46 @@ def test_validate_assumptions_treats_none_as_missing_not_zero():
 
 
 # --------------------------------------------------------------------------
+# Currency/region: assumptions.currency and assumptions.region validation
+# --------------------------------------------------------------------------
+
+def test_default_assumptions_currency_and_region_are_valid():
+    assumptions = contracts.default_assumptions()
+    assert assumptions["currency"] in contracts.SUPPORTED_CURRENCIES
+    assert assumptions["region"] in contracts.SUPPORTED_REGIONS
+    assert contracts.validate_assumptions(assumptions) == []
+
+
+def test_validate_assumptions_accepts_every_supported_currency_and_region():
+    for currency in contracts.SUPPORTED_CURRENCIES:
+        for region in contracts.SUPPORTED_REGIONS:
+            assumptions = {**contracts.default_assumptions(), "currency": currency, "region": region}
+            assert contracts.validate_assumptions(assumptions) == []
+
+
+def test_validate_assumptions_rejects_unknown_currency():
+    assumptions = contracts.default_assumptions()
+    assumptions["currency"] = "GBP"
+    issues = contracts.validate_assumptions(assumptions)
+    assert any("currency" in issue for issue in issues)
+
+
+def test_validate_assumptions_rejects_unknown_region():
+    assumptions = contracts.default_assumptions()
+    assumptions["region"] = "eu"
+    issues = contracts.validate_assumptions(assumptions)
+    assert any("region" in issue for issue in issues)
+
+
+def test_validate_assumptions_treats_missing_currency_and_region_as_valid():
+    # currency/region are Optional - absent is "use the default," not an error.
+    assumptions = contracts.default_assumptions()
+    del assumptions["currency"]
+    del assumptions["region"]
+    assert contracts.validate_assumptions(assumptions) == []
+
+
+# --------------------------------------------------------------------------
 # Gate: "fixtures/*.json and fixtures/golden/*.input.json exist and load
 # without error"
 # --------------------------------------------------------------------------

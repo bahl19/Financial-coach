@@ -32,8 +32,10 @@ from utils import app_state
 from utils import finance_calc as fc
 from utils import ingestion
 from utils import reporting as rp
+from utils import region as rg
 from utils import scenarios as sc
 from utils.contracts import default_assumptions, validate_profile
+from utils.currency import CURRENCY_SYMBOLS, currency_symbol, format_money
 from utils.llm import is_live
 
 st.set_page_config(page_title="AI Financial Coach", page_icon="\U0001f4b0", layout="wide")
@@ -215,9 +217,42 @@ if raw_transactions is None:
     st.caption("CSV format: columns `date`, `description`, `amount` -- expenses negative, income/deposits positive.")
     st.stop()
 
+# ---------------------------------------------- Currency & region settings --
+# Read/written here, before Step 2, so categorization below already reflects
+# a region change in the same rerun (Streamlit reruns top-to-bottom on every
+# widget interaction) - the currency/region symbol shown further down comes
+# from these same two variables, never a second hardcoded default.
+st.subheader("Currency & region")
+_pre_fields = app_state.get_profile_fields()
+_pre_assumptions = _pre_fields["assumptions"] or default_assumptions()
+cur_col, reg_col = st.columns(2)
+currency = cur_col.selectbox(
+    "Currency", options=list(CURRENCY_SYMBOLS),
+    index=list(CURRENCY_SYMBOLS).index(_pre_assumptions.get("currency") or "INR"),
+    format_func=lambda c: f"{c} ({CURRENCY_SYMBOLS[c]})",
+    key="currency_select",
+    help="The symbol shown on every amount in this analysis, the report, and the tracker download.",
+)
+region = reg_col.selectbox(
+    "Country / vendor conventions", options=list(rg.SUPPORTED_REGIONS),
+    index=list(rg.SUPPORTED_REGIONS).index(rg.resolve_region(_pre_assumptions.get("region"))),
+    format_func=lambda r: {"india": "India", "generic": "Generic / other"}.get(r, r),
+    key="region_select",
+    help="Which vendor keywords categorize your transactions (e.g. Swiggy/BigBasket for India) and which "
+         "benchmark rates appear in Scenario Comparison's rate-comparison tab.",
+)
+app_state.set_profile_fields(
+    monthly_income=_pre_fields["monthly_income"], current_savings=_pre_fields["current_savings"],
+    confirmed_monthly_expenses=_pre_fields["confirmed_monthly_expenses"],
+    current_investments=_pre_fields["current_investments"],
+    debts=_pre_fields["debts"], goals=_pre_fields["goals"], constraints=_pre_fields["constraints"],
+    assumptions={**_pre_assumptions, "currency": currency, "region": region},
+)
+
 # --------------------------------------------------------- Step 2: review --
 st.header("Step 2 - Review categorization")
-working_df = ingestion.tag_transaction_types(ingestion.categorize_with_confidence(raw_transactions))
+active_keywords = ingestion.category_keywords(region)
+working_df = ingestion.tag_transaction_types(ingestion.categorize_with_confidence(raw_transactions, active_keywords))
 review_items = ingestion.build_review_items(working_df)
 
 if review_items:
@@ -227,13 +262,13 @@ if review_items:
     )
     review_df = pd.DataFrame(review_items)[["transaction_index", "description", "amount", "suggested_category"]]
     review_df = review_df.rename(columns={"suggested_category": "category"})
-    known_categories = sorted(set(ingestion.CATEGORY_KEYWORDS) | {"Income", "Other"})
+    known_categories = sorted(set(active_keywords) | {"Income", "Other"})
     edited_review = st.data_editor(
         review_df, width="stretch", key="review_editor",
         column_config={
             "transaction_index": st.column_config.NumberColumn(disabled=True),
             "description": st.column_config.TextColumn(disabled=True),
-            "amount": st.column_config.NumberColumn(disabled=True, format="₹%.2f"),
+            "amount": st.column_config.NumberColumn(disabled=True, format=f"{currency_symbol(currency)}%.2f"),
             "category": st.column_config.SelectboxColumn(options=known_categories, required=True),
         },
     )
@@ -265,26 +300,29 @@ expenses_default = (
 st.subheader("Income & expenses")
 col1, col2 = st.columns(2)
 monthly_income = col1.number_input(
-    "Monthly income (₹)", min_value=0.0, value=float(income_default), step=100.0, key="monthly_income_input",
+    f"Monthly income ({currency_symbol(currency)})", min_value=0.0, value=float(income_default), step=100.0,
+    key="monthly_income_input",
     help=(
-        f"Pre-filled from your average observed monthly income (₹{income_suggestion:,.0f}) in the uploaded "
-        "data - confirm or adjust if that's not representative." if income_suggestion is not None
+        f"Pre-filled from your average observed monthly income ({format_money(income_suggestion, currency)}) "
+        "in the uploaded data - confirm or adjust if that's not representative." if income_suggestion is not None
         else "No income transaction found in the uploaded data - enter this manually."
     ),
 )
 confirmed_monthly_expenses = col2.number_input(
-    "Monthly expenses (₹)", min_value=0.0, value=float(expenses_default), step=100.0, key="expenses_input",
+    f"Monthly expenses ({currency_symbol(currency)})", min_value=0.0, value=float(expenses_default), step=100.0,
+    key="expenses_input",
     help=(
-        f"Pre-filled from your average observed monthly spending (₹{expense_suggestion:,.0f}) in the uploaded "
-        "data - confirm or adjust if a month here wasn't typical. This figure replaces the transaction-derived "
-        "average everywhere in the analysis once confirmed."
+        f"Pre-filled from your average observed monthly spending ({format_money(expense_suggestion, currency)}) "
+        "in the uploaded data - confirm or adjust if a month here wasn't typical. This figure replaces the "
+        "transaction-derived average everywhere in the analysis once confirmed."
     ),
 )
 
 st.subheader("Savings")
 col3, col4 = st.columns(2)
 current_savings = col3.number_input(
-    "Current savings balance (₹)", min_value=0.0, value=float(fields["current_savings"] or 0.0), step=100.0,
+    f"Current savings balance ({currency_symbol(currency)})", min_value=0.0,
+    value=float(fields["current_savings"] or 0.0), step=100.0,
     key="current_savings_input",
     help="Your current balance isn't in the transaction history (it only shows cash movements, not an account "
          "balance) - this is always entered manually.",
@@ -298,7 +336,8 @@ savings_apy = col4.number_input(
 st.subheader("Investments")
 col5, col6 = st.columns(2)
 current_investments = col5.number_input(
-    "Current investment total (₹)", min_value=0.0, value=float(fields["current_investments"] or 0.0), step=100.0,
+    f"Current investment total ({currency_symbol(currency)})", min_value=0.0,
+    value=float(fields["current_investments"] or 0.0), step=100.0,
     key="current_investments_input",
     help="Combined current value of mutual funds, stocks, PPF, FDs held as investments, etc. - separate from your "
          "savings account balance above.",
@@ -340,7 +379,7 @@ constraints = fields["constraints"] or {"minimum_monthly_buffer": 0.0, "protecte
 app_state.set_profile_fields(
     # monthly_income also drives the "required inputs" gate below - a
     # widget-default 0.0 is treated as "not yet entered" there. current_savings
-    # has no such gate: a literal, deliberate (or default/untouched) ₹0 is a
+    # has no such gate: a literal, deliberate (or default/untouched) 0 is a
     # real, computable answer, and collapsing it to None would silently turn
     # emergency_fund_months into "unknown" for a user who genuinely has no
     # savings - the exact "a real zero must not become None" failure mode
@@ -397,10 +436,10 @@ with tabs[0]:
     metrics = snapshot["metrics"]
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Health score", f"{snapshot['health_score']}/100", snapshot["health_band"])
-    c2.metric("Gross surplus", f"₹{metrics['gross_surplus']:,.0f}" if metrics.get("gross_surplus") is not None else "unknown")
-    c3.metric("Allocatable surplus", f"₹{metrics['allocatable_surplus']:,.0f}" if metrics.get("allocatable_surplus") is not None else "unknown")
-    c4.metric("Total debt", f"₹{metrics['total_debt']:,.0f}")
-    c5.metric("Net worth", f"₹{metrics['net_worth']:,.0f}" if metrics.get("net_worth") is not None else "unknown")
+    c2.metric("Gross surplus", format_money(metrics["gross_surplus"], currency) if metrics.get("gross_surplus") is not None else "unknown")
+    c3.metric("Allocatable surplus", format_money(metrics["allocatable_surplus"], currency) if metrics.get("allocatable_surplus") is not None else "unknown")
+    c4.metric("Total debt", format_money(metrics["total_debt"], currency))
+    c5.metric("Net worth", format_money(metrics["net_worth"], currency) if metrics.get("net_worth") is not None else "unknown")
 
     data_quality_flags = snapshot.get("data_quality_flags") or []
     if data_quality_flags:
@@ -422,12 +461,13 @@ with tabs[0]:
     st.subheader("\U0001f6e3️ Roadmap")
     st.caption(
         f"Buffer reserved (planning constraint, not a distributed transfer): "
-        f"₹{roadmap['allocation']['buffer_reserved']:,.2f}"
+        f"{format_money(roadmap['allocation']['buffer_reserved'], currency, 2)}"
     )
     for action in sorted(roadmap["actions"], key=lambda a: a["priority"]):
         icon = _SEVERITY_ICON.get(action["severity"], "")
         st.markdown(
-            f"{action['priority']}. {icon} **{action['title']}** ({action['timeframe']}): ₹{action['monthly_amount']:,.2f}/mo"
+            f"{action['priority']}. {icon} **{action['title']}** ({action['timeframe']}): "
+            f"{format_money(action['monthly_amount'], currency, 2)}/mo"
         )
         st.caption(action["rationale"])
 
@@ -481,7 +521,7 @@ with tabs[5]:
     for gr in goal_results:
         goal = gr["supporting_tables"]["goal"]
         with st.container(border=True):
-            st.markdown(f"**{goal['name']}** -- ₹{goal.get('current', 0):,.0f} / ₹{goal['amount']:,.0f}")
+            st.markdown(f"**{goal['name']}** -- {format_money(goal.get('current', 0), currency)} / {format_money(goal['amount'], currency)}")
             progress = min(goal.get("current", 0) / goal["amount"], 1.0) if goal["amount"] else 0.0
             st.progress(progress)
             st.markdown(gr["narrative"])
@@ -515,7 +555,6 @@ with tabs[6]:
 st.header("Step 5 - Compare scenarios")
 st.caption("Explore what-if changes to your plan. Nothing here changes your confirmed plan above.")
 
-_PRESET_RATES = (("Fixed Deposit (FD)", 0.065), ("PPF", 0.071), ("Equity SIP (illustrative)", 0.12))
 _SCENARIO_METRIC_LABELS = {
     "gross_surplus": "Gross surplus", "allocatable_surplus": "Allocatable surplus",
     "savings_rate_percent": "Savings rate (%)", "debt_to_income_percent": "Debt-to-income (%)",
@@ -533,7 +572,7 @@ with scenario_tabs[0]:
     with st.form("scenario_form"):
         sc1, sc2 = st.columns(2)
         preview_buffer = sc1.number_input(
-            "Preview: minimum monthly buffer (₹)", min_value=0.0,
+            f"Preview: minimum monthly buffer ({currency_symbol(currency)})", min_value=0.0,
             value=float(constraints["minimum_monthly_buffer"]), step=50.0,
         )
         preview_ef_months = sc2.number_input(
@@ -564,7 +603,8 @@ with scenario_tabs[1]:
     st.caption("Compare leaving an amount in savings versus moving it into your investments, at your confirmed rates.")
     ic1, ic2, ic3 = st.columns(3)
     idle_amount = ic1.number_input(
-        "Amount to compare (₹)", min_value=0.0, value=float(current_savings), step=1000.0, key="idle_amount_input",
+        f"Amount to compare ({currency_symbol(currency)})", min_value=0.0, value=float(current_savings),
+        step=1000.0, key="idle_amount_input",
     )
     idle_horizon_years = ic2.number_input("Over how many years?", min_value=1, value=5, step=1, key="idle_horizon_input")
     idle_cagr_pct = ic3.number_input(
@@ -576,9 +616,12 @@ with scenario_tabs[1]:
         savings_outcome = fc.savings_projection(idle_amount, 0.0, months=horizon_months, apr=savings_apy)
         investment_outcome = fc.savings_projection(idle_amount, 0.0, months=horizon_months, apr=idle_cagr_pct / 100.0)
         oc1, oc2 = st.columns(2)
-        oc1.metric(f"Staying in savings ({savings_apy * 100:.1f}% APY)", f"₹{savings_outcome[-1]['balance']:,.0f}")
-        oc2.metric(f"Moved to investment ({idle_cagr_pct:.1f}% CAGR)", f"₹{investment_outcome[-1]['balance']:,.0f}")
-        st.caption(f"Difference over {idle_horizon_years:.0f} year(s): ₹{investment_outcome[-1]['balance'] - savings_outcome[-1]['balance']:,.0f}")
+        oc1.metric(f"Staying in savings ({savings_apy * 100:.1f}% APY)", format_money(savings_outcome[-1]["balance"], currency))
+        oc2.metric(f"Moved to investment ({idle_cagr_pct:.1f}% CAGR)", format_money(investment_outcome[-1]["balance"], currency))
+        st.caption(
+            f"Difference over {idle_horizon_years:.0f} year(s): "
+            f"{format_money(investment_outcome[-1]['balance'] - savings_outcome[-1]['balance'], currency)}"
+        )
 
 # --- Cut discretionary spending by X% ---
 with scenario_tabs[2]:
@@ -615,7 +658,7 @@ with scenario_tabs[3]:
     else:
         pc1, pc2 = st.columns(2)
         prepay_amount = pc1.number_input(
-            "Extra monthly amount to compare (₹)", min_value=0.0,
+            f"Extra monthly amount to compare ({currency_symbol(currency)})", min_value=0.0,
             value=float(roadmap["allocation"]["debt_extra_payment"] or 500.0), step=100.0, key="prepay_amount_input",
         )
         prepay_strategy = pc2.selectbox("Payoff strategy", ["avalanche", "snowball"], key="prepay_strategy_input")
@@ -631,16 +674,16 @@ with scenario_tabs[3]:
             pc3, pc4 = st.columns(2)
             pc3.metric(
                 f"Prepay debt ({with_extra['months_to_payoff']} months to debt-free)",
-                f"₹{interest_saved:,.0f} interest saved",
+                f"{format_money(interest_saved, currency)} interest saved",
             )
             pc4.metric(
                 f"Invest instead over the same {with_extra['months_to_payoff']} months ({prepay_cagr_pct:.1f}% CAGR)",
-                f"₹{invested_instead[-1]['balance']:,.0f}",
+                format_money(invested_instead[-1]["balance"], currency),
             )
 
 # --- FD vs PPF vs Equity SIP for a goal ---
 with scenario_tabs[4]:
-    st.caption("Compare the monthly contribution required to reach a goal at a few common Indian rate benchmarks.")
+    st.caption(f"Compare the monthly contribution required to reach a goal at {rg.benchmark_caption(region)}.")
     if not profile["goals"]:
         st.caption("Add a goal in Step 3 to compare rates for it.")
     else:
@@ -655,10 +698,10 @@ with scenario_tabs[4]:
                     selected_goal["amount"], selected_goal["months"], selected_goal.get("current", 0.0), rate,
                 ),
             }
-            for label, rate in _PRESET_RATES
+            for label, rate in rg.benchmark_rates(region)
         ]
         rate_df = pd.DataFrame(rate_rows)
-        rate_df["Required monthly contribution"] = rate_df["Required monthly contribution"].map(lambda v: f"₹{v:,.0f}")
+        rate_df["Required monthly contribution"] = rate_df["Required monthly contribution"].map(lambda v: format_money(v, currency))
         st.dataframe(rate_df, width="stretch", hide_index=True)
         st.caption("These rates are illustrative benchmarks, not a recommendation or a guarantee of future returns.")
 
@@ -671,8 +714,9 @@ dl1.download_button(
     file_name=f"{report_package['filename_stem']}.md", mime="text/markdown",
 )
 _TRACKER_COLUMN_LABELS = {
-    "month": "Month", "planned_savings": "Planned Savings (₹)",
-    "extra_debt_payment": "Extra Debt Payment (₹)", "goal_contributions": "Goal Contributions (₹)",
+    "month": "Month", "planned_savings": f"Planned Savings ({currency_symbol(currency)})",
+    "extra_debt_payment": f"Extra Debt Payment ({currency_symbol(currency)})",
+    "goal_contributions": f"Goal Contributions ({currency_symbol(currency)})",
 }
 tracker_csv = pd.DataFrame(report_package["tracker_rows"]).rename(columns=_TRACKER_COLUMN_LABELS).to_csv(index=False)
 dl2.download_button(

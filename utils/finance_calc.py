@@ -906,7 +906,11 @@ def _goal_feasibility_findings(snapshot: dict, trends: List[Trend]) -> List[Find
         findings.append(_finding(
             f"FINDING_GOAL_SHORTFALL_{slug}", "goal_feasibility", f"{goal.get('name')} is not currently feasible",
             "medium", "next_90_days", 1.0, "fact", [], [],
-            f"Required monthly contribution exceeds available surplus by ₹{goal.get('shortfall', 0):.0f}.",
+            # No currency symbol here: derive_findings()'s signature is
+            # (snapshot, trends) only (Phase 2's frozen, currency-agnostic
+            # contract) - display formatting is the specialist/report/UI
+            # layer's job (utils/currency.py), not this deterministic engine's.
+            f"Required monthly contribution exceeds available surplus by {goal.get('shortfall', 0):.0f}.",
             "Extend the timeline, reduce the target amount, or free up more surplus.",
         ))
     return findings

@@ -25,50 +25,67 @@ import pandas as pd
 
 from agents.data_agent import DataIngestionAgent
 from utils.contracts import ReviewItem, Transaction
+from utils.region import DEFAULT_REGION, resolve_region
 
 # --------------------------------------------------------------------------
 # Category-confidence keyword catalogue (Component 2 owns this)
 # --------------------------------------------------------------------------
+#
+# Split into a region-neutral base table (generic terms + widely-known/US
+# brands) and a per-region add-on layered on top by category_keywords().
+# "india" reproduces the original, pre-region-selector CATEGORY_KEYWORDS
+# exactly - it was the only table that existed before this split.
 
-CATEGORY_KEYWORDS = {
-    "Rent/Mortgage": ["rent", "mortgage", "landlord", "apartments", "house rent", "flat owner"],
-    "Groceries": [
-        "grocery", "groceries", "supermarket", "whole foods", "trader joe", "safeway", "kroger",
-        "bigbasket", "big basket", "dmart", "d-mart", "reliance fresh", "reliance smart", "more supermarket",
-        "jiomart", "nature's basket", "spencer's",
-    ],
-    "Dining": [
-        "restaurant", "cafe", "coffee", "starbucks", "doordash", "ubereats", "grubhub",
-        "mcdonald", "chipotle", "rooftop", "swiggy", "zomato", "dominos", "cafe coffee day", "ccd",
-    ],
-    "Transport": [
-        "uber", "lyft", "gas station", "shell", "chevron", "exxon", "parking", "transit", "metro",
-        "ola", "rapido", "irctc", "petrol", "petrol pump", "hpcl", "bpcl", "indian oil", "fuel",
-    ],
-    "Utilities": [
-        "electric", "water bill", "gas bill", "internet", "comcast", "at&t", "verizon", "utility",
-        "bescom", "electricity board", "discom", "jio", "airtel", "vodafone", "vi ", "broadband", "gas cylinder", "lpg",
-    ],
-    "Subscriptions": [
-        "netflix", "spotify", "hulu", "amazon prime", "subscription", "gym", "planet fitness",
-        "hotstar", "jiocinema", "sonyliv", "cult.fit", "cultfit",
-    ],
-    "Entertainment": ["movie", "cinema", "amc", "concert", "steam", "playstation", "xbox", "tickets", "pvr", "inox", "bookmyshow"],
-    "Shopping": ["amazon.com", "target", "walmart", "best buy", "mall", "amazon.in", "flipkart", "myntra", "ajio"],
-    "Insurance": ["insurance", "geico", "state farm", "lic", "policybazaar", "hdfc life", "sbi life"],
-    "Healthcare": [
-        "pharmacy", "cvs", "walgreens", "doctor", "clinic", "hospital",
-        "apollo pharmacy", "1mg", "practo", "medplus", "netmeds",
-    ],
-    "Debt Payment": [
-        "credit card payment", "loan payment", "student loan", "auto loan",
-        "emi", "personal loan", "home loan", "car loan",
-    ],
-    "Savings/Investing": [
-        "transfer to savings", "401k", "ira contribution", "brokerage", "investment",
-        "sip", "mutual fund", "zerodha", "groww", "ppf", "nps", "recurring deposit", "rd deposit", "fixed deposit",
-    ],
+_BASE_CATEGORY_KEYWORDS = {
+    "Rent/Mortgage": ["rent", "mortgage", "landlord", "apartments"],
+    "Groceries": ["grocery", "groceries", "supermarket", "whole foods", "trader joe", "safeway", "kroger"],
+    "Dining": ["restaurant", "cafe", "coffee", "starbucks", "doordash", "ubereats", "grubhub", "mcdonald", "chipotle", "rooftop"],
+    "Transport": ["uber", "lyft", "gas station", "shell", "chevron", "exxon", "parking", "transit", "metro", "fuel"],
+    "Utilities": ["electric", "water bill", "gas bill", "internet", "comcast", "at&t", "verizon", "utility", "broadband"],
+    "Subscriptions": ["netflix", "spotify", "hulu", "amazon prime", "subscription", "gym", "planet fitness"],
+    "Entertainment": ["movie", "cinema", "amc", "concert", "steam", "playstation", "xbox", "tickets"],
+    "Shopping": ["amazon.com", "target", "walmart", "best buy", "mall"],
+    "Insurance": ["insurance", "geico", "state farm"],
+    "Healthcare": ["pharmacy", "cvs", "walgreens", "doctor", "clinic", "hospital"],
+    "Debt Payment": ["credit card payment", "loan payment", "student loan", "auto loan", "personal loan", "home loan", "car loan"],
+    "Savings/Investing": ["transfer to savings", "401k", "ira contribution", "brokerage", "investment", "mutual fund"],
 }
+
+_INDIA_CATEGORY_KEYWORDS = {
+    "Rent/Mortgage": ["house rent", "flat owner"],
+    "Groceries": ["bigbasket", "big basket", "dmart", "d-mart", "reliance fresh", "reliance smart", "more supermarket", "jiomart", "nature's basket", "spencer's"],
+    "Dining": ["swiggy", "zomato", "dominos", "cafe coffee day", "ccd"],
+    "Transport": ["ola", "rapido", "irctc", "petrol", "petrol pump", "hpcl", "bpcl", "indian oil"],
+    "Utilities": ["bescom", "electricity board", "discom", "jio", "airtel", "vodafone", "vi ", "gas cylinder", "lpg"],
+    "Subscriptions": ["hotstar", "jiocinema", "sonyliv", "cult.fit", "cultfit"],
+    "Entertainment": ["pvr", "inox", "bookmyshow"],
+    "Shopping": ["amazon.in", "flipkart", "myntra", "ajio"],
+    "Insurance": ["lic", "policybazaar", "hdfc life", "sbi life"],
+    "Healthcare": ["apollo pharmacy", "1mg", "practo", "medplus", "netmeds"],
+    "Debt Payment": ["emi"],
+    "Savings/Investing": ["sip", "zerodha", "groww", "ppf", "nps", "recurring deposit", "rd deposit", "fixed deposit"],
+}
+
+_REGION_ADD_ONS = {
+    "india": _INDIA_CATEGORY_KEYWORDS,
+    "generic": {},
+}
+
+
+def category_keywords(region: str = DEFAULT_REGION) -> dict:
+    """Returns the base keyword table plus the given region's add-on. Never
+    mutates either source table."""
+    merged = {category: list(words) for category, words in _BASE_CATEGORY_KEYWORDS.items()}
+    for category, extra in _REGION_ADD_ONS[resolve_region(region)].items():
+        merged.setdefault(category, []).extend(extra)
+    return merged
+
+
+# Kept as a module-level default (today's behavior, byte-identical) so every
+# existing call site and test that references CATEGORY_KEYWORDS directly, or
+# calls categorize_with_confidence()/_match_category() without a region,
+# keeps working unchanged.
+CATEGORY_KEYWORDS = category_keywords(DEFAULT_REGION)
 
 _UNMATCHED_CATEGORY = "Other"
 _MATCHED_CONFIDENCE = 1.0
@@ -84,13 +101,13 @@ _CATEGORY_TO_TRANSACTION_TYPE = {
 }
 
 
-def _match_category(description: str, amount: float) -> tuple:
+def _match_category(description: str, amount: float, keyword_table: dict = None) -> tuple:
     """Returns (category, confidence). A keyword match is full confidence.
     An unmatched positive amount is "Income" at full confidence (the sign is
     an observed fact, not a guess). An unmatched negative amount is "Other"
     at zero confidence and must be reviewed - it is never silently guessed."""
     desc = str(description).lower()
-    for category, keywords in CATEGORY_KEYWORDS.items():
+    for category, keywords in (keyword_table if keyword_table is not None else CATEGORY_KEYWORDS).items():
         if any(keyword in desc for keyword in keywords):
             return category, _MATCHED_CONFIDENCE
     if amount > 0:
@@ -106,18 +123,21 @@ def load_transactions(uploaded_file) -> pd.DataFrame:
     return DataIngestionAgent().load(uploaded_file)
 
 
-def categorize_with_confidence(transactions: pd.DataFrame) -> pd.DataFrame:
+def categorize_with_confidence(transactions: pd.DataFrame, keyword_table: dict = None) -> pd.DataFrame:
     """Assigns category, category_confidence, and needs_review to every
     transaction. Returns a new dataframe; never mutates the input.
 
     An unmatched transaction is categorized "Other" at confidence 0.0 and
     flagged needs_review=True - it is surfaced for a human decision, never
-    silently guessed at."""
+    silently guessed at.
+
+    `keyword_table` defaults to CATEGORY_KEYWORDS (today's India-region
+    table) - pass `category_keywords(region)` for a region-aware call."""
     out = transactions.copy()
     categories: List[str] = []
     confidences: List[float] = []
     for _, row in out.iterrows():
-        category, confidence = _match_category(row["description"], row["amount"])
+        category, confidence = _match_category(row["description"], row["amount"], keyword_table)
         categories.append(category)
         confidences.append(confidence)
     out["category"] = categories

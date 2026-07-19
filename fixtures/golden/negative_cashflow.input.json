@@ -37,7 +37,7 @@
     "protected_categories": ["Healthcare"]
   },
   "assumptions": {
-    "currency": "USD",
+    "currency": "INR",
     "needs_ratio": 0.50,
     "wants_ratio": 0.30,
     "savings_ratio": 0.20,

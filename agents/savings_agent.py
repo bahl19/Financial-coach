@@ -1,5 +1,6 @@
 from agents.base import BaseAgent
 from utils import finance_calc as fc
+from utils.currency import format_money
 
 
 class SavingsStrategyAgent(BaseAgent):
@@ -14,7 +15,7 @@ class SavingsStrategyAgent(BaseAgent):
     def _build_summary(
         self, monthly_cashflow, current_savings, savings_contribution, savings_apy=0.0,
         investment_contribution=0.0, current_investments=0.0, investment_cagr=None,
-        action_id=None, finding_refs=None, trend_refs=None,
+        action_id=None, finding_refs=None, trend_refs=None, currency=None,
     ) -> tuple:
         # avg_expenses is read from spending_result's already-computed monthly
         # cashflow, not recomputed from raw transactions (Implementation Plan,
@@ -37,25 +38,26 @@ class SavingsStrategyAgent(BaseAgent):
             )
 
         summary = (
-            f"Current savings: ₹{current_savings:,.0f}. "
-            f"Recommended emergency fund target (3-6 months expenses): ₹{target[0]:,.0f}-₹{target[1]:,.0f}. "
-            f"Monthly savings contribution allocated by the roadmap: ₹{savings_contribution:,.0f} "
+            f"Current savings: {format_money(current_savings, currency)}. "
+            f"Recommended emergency fund target (3-6 months expenses): "
+            f"{format_money(target[0], currency)}-{format_money(target[1], currency)}. "
+            f"Monthly savings contribution allocated by the roadmap: {format_money(savings_contribution, currency)} "
             f"(at {savings_apy * 100:.1f}% APY). "
-            f"Projected savings balance in 24 months: ₹{savings_projected[-1]['balance']:,.0f}."
+            f"Projected savings balance in 24 months: {format_money(savings_projected[-1]['balance'], currency)}."
         )
         if investment_projected is not None:
             summary += (
-                f" Monthly investment contribution: ₹{investment_contribution:,.0f} "
+                f" Monthly investment contribution: {format_money(investment_contribution, currency)} "
                 f"(at {(investment_cagr or 0.0) * 100:.1f}% CAGR, versus the {savings_apy * 100:.1f}% savings APY). "
-                f"Projected investment balance in 24 months: ₹{investment_projected[-1]['balance']:,.0f}."
+                f"Projected investment balance in 24 months: {format_money(investment_projected[-1]['balance'], currency)}."
             )
 
         structured = {
             "allocated_amount": savings_contribution + investment_contribution,
             "why_allocated": action_id,
             "expected_effect": (
-                f"Projected savings balance in 24 months: ₹{savings_projected[-1]['balance']:,.0f}."
-                + (f" Projected investment balance: ₹{investment_projected[-1]['balance']:,.0f}." if investment_projected else "")
+                f"Projected savings balance in 24 months: {format_money(savings_projected[-1]['balance'], currency)}."
+                + (f" Projected investment balance: {format_money(investment_projected[-1]['balance'], currency)}." if investment_projected else "")
             ),
             "tradeoffs": "Money contributed here is not available for debt payoff or discretionary spending.",
             "what_to_monitor": "Whether the emergency fund target is reached before redirecting savings elsewhere.",
@@ -69,6 +71,7 @@ class SavingsStrategyAgent(BaseAgent):
                 "investment_contribution": investment_contribution,
                 "investment_projection": investment_projected,
                 "investment_cagr": investment_cagr,
+                "currency": currency,
             },
         }
         return summary, structured
@@ -80,19 +83,20 @@ class SavingsStrategyAgent(BaseAgent):
         investment_contribution = structured["supporting_tables"].get("investment_contribution") or 0.0
         investment_projection = structured["supporting_tables"].get("investment_projection")
         investment_cagr = structured["supporting_tables"].get("investment_cagr") or 0.0
+        currency = structured["supporting_tables"].get("currency")
         contribution = structured["allocated_amount"] or 0.0
         savings_contribution = contribution - investment_contribution
 
         lines = [
             "**Savings Strategy (offline rule-based mode)**",
-            f"- Target emergency fund: ₹{target[0]:,.0f}-₹{target[1]:,.0f} (3-6 months of expenses).",
-            f"- Monthly savings contribution allocated by the roadmap: ₹{savings_contribution:,.0f} (at {savings_apy * 100:.1f}% APY).",
-            f"- At this rate, projected savings in 24 months: ₹{projection[-1]['balance']:,.0f}.",
+            f"- Target emergency fund: {format_money(target[0], currency)}-{format_money(target[1], currency)} (3-6 months of expenses).",
+            f"- Monthly savings contribution allocated by the roadmap: {format_money(savings_contribution, currency)} (at {savings_apy * 100:.1f}% APY).",
+            f"- At this rate, projected savings in 24 months: {format_money(projection[-1]['balance'], currency)}.",
         ]
         if investment_projection is not None:
             lines.append(
-                f"- Monthly investment contribution allocated by the roadmap: ₹{investment_contribution:,.0f} "
+                f"- Monthly investment contribution allocated by the roadmap: {format_money(investment_contribution, currency)} "
                 f"(at {investment_cagr * 100:.1f}% CAGR)."
             )
-            lines.append(f"- At this rate, projected investment balance in 24 months: ₹{investment_projection[-1]['balance']:,.0f}.")
+            lines.append(f"- At this rate, projected investment balance in 24 months: {format_money(investment_projection[-1]['balance'], currency)}.")
         return "\n".join(lines)

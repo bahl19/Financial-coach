@@ -18,6 +18,13 @@ from typing import Dict, List, Optional, TypedDict
 
 SCHEMA_VERSION = "1.0"
 
+# Canonical valid values for assumptions.currency/region. Symbol/keyword/rate
+# mappings for these values live in utils/currency.py and utils/region.py
+# (which import the tuples below) - kept here, not there, so this leaf module
+# never has to import back out of utils/.
+SUPPORTED_CURRENCIES = ("INR", "USD")
+SUPPORTED_REGIONS = ("india", "generic")
+
 Severity = str  # one of: "critical", "high", "medium", "low", "positive"
 Urgency = str  # one of: "immediate", "this_month", "next_90_days", "long_term"
 FactOrInference = str  # one of: "fact", "deterministic_inference" (MVP 1 never emits "hypothesis")
@@ -74,6 +81,11 @@ class PlanningAssumptions(TypedDict):
     savings_apy: float
     emergency_fund_months: int
     investment_cagr: Optional[float]  # rate the user reports currently earning on current_investments
+    # Drives vendor-keyword and benchmark-rate selection (utils/region.py) -
+    # independent of currency (a USD earner can still be in the "india"
+    # region and vice versa). None resolves to "india", today's unconditional
+    # pre-region-selector behavior, via utils.region.resolve_region().
+    region: Optional[str]
 
 
 class FinancialProfile(TypedDict):
@@ -297,6 +309,7 @@ def default_assumptions() -> PlanningAssumptions:
         "savings_apy": 0.04,
         "emergency_fund_months": 3,
         "investment_cagr": None,
+        "region": "india",
     }
 
 
@@ -336,6 +349,14 @@ def validate_assumptions(assumptions: PlanningAssumptions) -> List[str]:
     investment_cagr = assumptions.get("investment_cagr")
     if investment_cagr is not None and not (0.0 <= investment_cagr <= 1.0):
         issues.append(f"investment_cagr must be between 0 and 1, got {investment_cagr}")
+
+    currency = assumptions.get("currency")
+    if currency is not None and currency not in SUPPORTED_CURRENCIES:
+        issues.append(f"currency must be one of {SUPPORTED_CURRENCIES}, got {currency!r}")
+
+    region = assumptions.get("region")
+    if region is not None and region not in SUPPORTED_REGIONS:
+        issues.append(f"region must be one of {SUPPORTED_REGIONS}, got {region!r}")
 
     return issues
 

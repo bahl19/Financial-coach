@@ -230,3 +230,47 @@ def test_no_duplicate_flag_when_transactions_are_genuinely_distinct():
     codes = {flag["code"] for flag in flags}
     assert "DUPLICATE_TRANSACTIONS" not in codes
     assert "MISSING_MONTHS" not in codes
+
+
+# --------------------------------------------------------------------------
+# Region-aware categorization: category_keywords(region) and the optional
+# keyword_table parameter it threads into categorize_with_confidence().
+# --------------------------------------------------------------------------
+
+def test_india_region_keywords_match_the_legacy_module_default_exactly():
+    # "india" must reproduce today's CATEGORY_KEYWORDS byte-for-byte - it was
+    # the only table that existed before the region split.
+    assert ingestion.category_keywords("india") == ingestion.CATEGORY_KEYWORDS
+
+
+def test_generic_region_excludes_india_only_vendor_keywords():
+    generic_words = {w for words in ingestion.category_keywords("generic").values() for w in words}
+    assert "swiggy" not in generic_words
+    assert "bigbasket" not in generic_words
+    assert "emi" not in generic_words
+    # Region-neutral/US brand keywords still present.
+    assert "starbucks" in generic_words
+    assert "whole foods" in generic_words
+
+
+def test_unknown_region_falls_back_to_india():
+    assert ingestion.category_keywords("atlantis") == ingestion.category_keywords("india")
+
+
+def test_categorize_with_confidence_respects_explicit_keyword_table():
+    raw = pd.DataFrame([{"date": "2026-05-01", "description": "Swiggy order", "amount": -20.0}])
+    raw["date"] = pd.to_datetime(raw["date"])
+
+    india_categorized = ingestion.categorize_with_confidence(raw, ingestion.category_keywords("india"))
+    assert india_categorized.iloc[0]["category"] == "Dining"
+
+    generic_categorized = ingestion.categorize_with_confidence(raw, ingestion.category_keywords("generic"))
+    assert generic_categorized.iloc[0]["category"] == "Other"
+    assert generic_categorized.iloc[0]["category_confidence"] == 0.0
+
+
+def test_categorize_with_confidence_defaults_to_india_region_without_a_table_argument():
+    raw = pd.DataFrame([{"date": "2026-05-01", "description": "Swiggy order", "amount": -20.0}])
+    raw["date"] = pd.to_datetime(raw["date"])
+    categorized = ingestion.categorize_with_confidence(raw)
+    assert categorized.iloc[0]["category"] == "Dining"

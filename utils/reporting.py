@@ -20,6 +20,7 @@ from typing import List
 from utils.contracts import (
     CoachSummary, Finding, FinancialProfile, FinancialSnapshot, Risk, Roadmap, ReportPackage, TrackerRow, Trend,
 )
+from utils.currency import format_money
 
 # Architecture Plan.md's own words for this limitation, reused verbatim so
 # the two documents cannot drift apart over separate edits.
@@ -139,17 +140,18 @@ def assemble_report_content(
 # value here is computed, only read from what assembly already selected.
 # --------------------------------------------------------------------------
 
-def _format_debts(debts: list) -> str:
+def _format_debts(debts: list, currency=None) -> str:
     if not debts:
         return "_No debts on file._"
-    return "\n".join(f"- **{d['name']}**: ₹{d['balance']:,.2f} at {d['apr']}% APR" for d in debts)
+    return "\n".join(f"- **{d['name']}**: {format_money(d['balance'], currency, 2)} at {d['apr']}% APR" for d in debts)
 
 
-def _format_goals(goals: list) -> str:
+def _format_goals(goals: list, currency=None) -> str:
     if not goals:
         return "_No goals on file._"
     return "\n".join(
-        f"- **{g['name']}**: ₹{g['amount']:,.2f} in {g['months']} months (₹{g.get('current', 0):,.2f} saved so far)"
+        f"- **{g['name']}**: {format_money(g['amount'], currency, 2)} in {g['months']} months "
+        f"({format_money(g.get('current', 0), currency, 2)} saved so far)"
         for g in goals
     )
 
@@ -214,24 +216,27 @@ def _format_risks(risks: list) -> str:
     return "\n".join(f"- `{r['risk_id']}` [{r['severity']}/{r['urgency']}] ({r['category']})" for r in risks)
 
 
-def _format_roadmap(allocation: dict, actions: list) -> str:
+def _format_roadmap(allocation: dict, actions: list, currency=None) -> str:
     # buffer_reserved is a planning constraint, not a monthly transfer - it
     # gets its own labeled line, set apart from the distributed-amount list,
     # rather than being folded into that list or any total below it.
     lines = [
-        f"**Buffer reserved (planning constraint, not a distributed transfer):** ₹{allocation['buffer_reserved']:,.2f}",
+        f"**Buffer reserved (planning constraint, not a distributed transfer):** {format_money(allocation['buffer_reserved'], currency, 2)}",
         "",
         "**Distributed monthly allocation:**",
-        f"- Extra debt payment: ₹{allocation['debt_extra_payment']:,.2f}",
-        f"- Savings contribution: ₹{allocation['savings_contribution']:,.2f}",
-        f"- Investment contribution: ₹{allocation['investment_contribution']:,.2f}",
+        f"- Extra debt payment: {format_money(allocation['debt_extra_payment'], currency, 2)}",
+        f"- Savings contribution: {format_money(allocation['savings_contribution'], currency, 2)}",
+        f"- Investment contribution: {format_money(allocation['investment_contribution'], currency, 2)}",
     ]
     for goal_name, amount in allocation["goal_contributions"].items():
-        lines.append(f"- Goal contribution ({goal_name}): ₹{amount:,.2f}")
+        lines.append(f"- Goal contribution ({goal_name}): {format_money(amount, currency, 2)}")
     lines.append("")
     lines.append("**Actions, in priority order:**")
     for action in sorted(actions, key=lambda a: a["priority"]):
-        lines.append(f"{action['priority']}. **{action['title']}** ({action['timeframe']}): ₹{action['monthly_amount']:,.2f}/mo")
+        lines.append(
+            f"{action['priority']}. **{action['title']}** ({action['timeframe']}): "
+            f"{format_money(action['monthly_amount'], currency, 2)}/mo"
+        )
     return "\n".join(lines)
 
 
@@ -261,6 +266,7 @@ def _format_data_quality(flags: list) -> str:
 
 def format_report_markdown(content: dict) -> str:
     profile_inputs = content["profile_inputs"]
+    currency = content["assumptions"].get("currency")
     sections = [
         "# Financial Coach Report",
         "",
@@ -269,10 +275,10 @@ def format_report_markdown(content: dict) -> str:
         f"- Current savings: {profile_inputs['current_savings']}",
         "",
         "### Debts",
-        _format_debts(profile_inputs["debts"]),
+        _format_debts(profile_inputs["debts"], currency),
         "",
         "### Goals",
-        _format_goals(profile_inputs["goals"]),
+        _format_goals(profile_inputs["goals"], currency),
         "",
         "## Health Metrics",
         _format_health(content["health"]),
@@ -287,7 +293,7 @@ def format_report_markdown(content: dict) -> str:
         _format_risks(content["risks"]),
         "",
         "## Roadmap",
-        _format_roadmap(content["roadmap_allocation"], content["roadmap_actions"]),
+        _format_roadmap(content["roadmap_allocation"], content["roadmap_actions"], currency),
         "",
         "## Coach Summary",
         _format_coach_sections(content["coach_sections"]),
