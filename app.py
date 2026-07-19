@@ -28,7 +28,7 @@ load_dotenv()
 
 from agents import graph as g
 from agents.orchestrator import build_chat_reply
-from utils import app_state, ingestion
+from utils import app_state, ingestion, theme
 from utils import auth as authn
 from utils import finance_calc as fc
 from utils import region as rg
@@ -39,6 +39,10 @@ from utils.currency import CURRENCY_SYMBOLS, currency_symbol, format_money
 from utils.llm import is_live
 
 st.set_page_config(page_title="AI Financial Coach", page_icon="\U0001f4b0", layout="wide")
+
+theme.render_theme_toggle()
+theme.inject_theme_css()
+theme.apply_plotly_template()
 
 if authn.auth_enabled() and not authn.is_logged_in():
     authn.render_login_screen()
@@ -194,10 +198,10 @@ app_state.init_state()
 # ---------------------------------------------------------------- sidebar --
 with st.sidebar:
     st.title("\U0001f4b0 AI Financial Coach")
-    st.caption("A multi-agent financial coach")
-    st.markdown(f"**LLM status:** {'\U0001f7e2 Connected via OpenRouter' if is_live() else '\U0001f7e1 Offline mode (rule-based fallback)'}")
+    st.caption("Your AI-powered money coach — plain-language insights, not just numbers.")
+    st.markdown(f"**Coach status:** {'\U0001f7e2 Live, powered by OpenRouter' if is_live() else '\U0001f7e1 Offline mode — smart rule-based guidance'}")
     if not is_live():
-        st.caption("Set OPENROUTER_API_KEY in .env to enable full LLM-generated narratives.")
+        st.caption("Add OPENROUTER_API_KEY to your .env for richer, AI-generated narratives.")
 
     st.divider()
     st.subheader("Step 1 - Your data")
@@ -218,7 +222,7 @@ st.title("\U0001f4b0 AI Financial Coach")
 
 raw_transactions = app_state.get_raw_transactions()
 if raw_transactions is None:
-    st.info("\U0001f448 Load sample data or upload a transactions file in the sidebar to get started.")
+    st.info("\U0001f448 Load our sample data or upload your own statement in the sidebar to see your coach in action.")
     st.caption("CSV format: columns `date`, `description`, `amount` -- expenses negative, income/deposits positive.")
     st.stop()
 
@@ -484,14 +488,14 @@ with tabs[1]:
     by_cat = spending_result["supporting_tables"]["by_category"]
     if not by_cat.empty:
         fig = px.pie(by_cat, names="category", values="amount", hole=0.4)
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, width="stretch", theme=None)  # theme=None: use our brand template, not Streamlit's own
     monthly = spending_result["supporting_tables"]["monthly_cashflow"]
     if not monthly.empty:
         fig2 = go.Figure()
         fig2.add_bar(x=monthly["month"], y=monthly["income"], name="Income")
         fig2.add_bar(x=monthly["month"], y=monthly["expenses"], name="Expenses")
         fig2.update_layout(barmode="group", height=350)
-        st.plotly_chart(fig2, width="stretch")
+        st.plotly_chart(fig2, width="stretch", theme=None)
 
 # --- Debt ------------------------------------------------------------------
 with tabs[2]:

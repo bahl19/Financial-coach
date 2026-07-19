@@ -1,0 +1,20 @@
+# Static base theme, matching utils/theme.py's DARK palette exactly.
+#
+# Streamlit's [theme] config is read once at server start and drives a few
+# things CSS cannot reach at runtime - most notably the canvas-rendered
+# dataframe/data_editor grid (glide-data-grid), which reads its own colors
+# from this config instead of the page's CSS. utils/theme.py's dark/light
+# toggle re-themes everything CSS *can* reach (buttons, tabs, metrics,
+# alerts, inputs, sidebar) on every rerun; the data grid follows this
+# static config instead and does not flip with the toggle - a real,
+# disclosed limitation of Streamlit's theming model (a full theme change
+# needs a fresh page load, which a same-session toggle deliberately avoids),
+# not an oversight. Documented again in utils/theme.py's module docstring
+# and Implementation Plan - MVP 1.md's maintenance log.
+[theme]
+base = "dark"
+primaryColor = "#5ef3ce"
+backgroundColor = "#081527"
+secondaryBackgroundColor = "#0d2238"
+textColor = "#e8eff6"
+font = "sans serif"

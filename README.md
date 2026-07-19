@@ -56,7 +56,7 @@ streamlit run app.py
 ```
 
 ### 5. Load your data
-Open **http://localhost:8501** (or the [live app](https://financialcoach.streamlit.app/)), click **"Load sample data"** for an instant demo, or upload your own CSV/PDF statement.
+Open **http://localhost:8501** (or the [live app](https://financialcoach.streamlit.app/)), click **"Load sample data"** for an instant demo, or upload your own CSV/PDF statement. Toggle dark/light mode any time from the sidebar — the whole app, including charts, follows the same navy-and-mint brand theme as the [landing page](UI/Financial%20Coach%20Landing.dc.html).
 
 ---
 

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Coach — Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Spline+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#081527;
+    --navy-2:#0b1e33;
+    --panel:#0d2238;
+    --mint:#5ef3ce;
+    --mint-dim:rgba(94,243,206,.14);
+    --mint-line:rgba(94,243,206,.28);
+    --ink:#e8eff6;
+    --muted:#8ca3b8;
+    --line:rgba(140,163,184,.16);
+    --green:#12c96f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:'Spline Sans',system-ui,sans-serif;
+    background:var(--navy);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+
+  /* ---------- ambient background arcs (from the brand mark) ---------- */
+  .bg{
+    position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(1100px 700px at 85% -10%, rgba(94,243,206,.06), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(94,243,206,.05), transparent 55%),
+      var(--navy);
+  }
+  .bg svg{position:absolute;inset:0;width:100%;height:100%}
+
+  .page{
+    position:relative;z-index:1;
+    min-height:100vh;
+    display:grid;
+    grid-template-columns:1.15fr 1fr;
+  }
+
+  /* ============================ LEFT / BRAND ============================ */
+  .brand-side{
+    padding:56px 64px;
+    display:flex;flex-direction:column;justify-content:space-between;
+    border-right:1px solid var(--line);
+    position:relative;
+  }
+  .logo{display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--ink)}
+  .logo-mark{width:40px;height:40px;flex:none}
+  .logo-mark path{
+    stroke:var(--mint);stroke-width:7;fill:none;stroke-linecap:round;
+  }
+  .logo-word{
+    font-family:'Archivo',sans-serif;
+    font-variation-settings:'wdth' 118,'wght' 700;
+    letter-spacing:.34em;
+    font-size:13px;text-transform:uppercase;
+  }
+
+  .hero{max-width:560px;margin:48px 0}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:10px;
+    font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--mint);
+    border:1px solid var(--mint-line);
+    background:var(--mint-dim);
+    padding:8px 16px;border-radius:999px;
+    margin-bottom:28px;
+  }
+  .eyebrow::before{
+    content:'';width:6px;height:6px;border-radius:50%;
+    background:var(--mint);
+    box-shadow:0 0 10px var(--mint);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  h1{
+    font-family:'Archivo',sans-serif;
+    font-variation-settings:'wdth' 116,'wght' 780;
+    text-transform:uppercase;
+    font-size:clamp(38px,4.6vw,62px);
+    line-height:1.02;
+    letter-spacing:.02em;
+  }
+  h1 .accent{color:var(--mint)}
+  .sub{
+    margin-top:20px;
+    font-size:17px;font-weight:300;line-height:1.65;color:var(--muted);
+    max-width:44ch;
+  }
+  .sub strong{color:var(--ink);font-weight:500}
+
+  /* ---- animated bars, lifted straight from the video ---- */
+  .chart{
+    margin-top:44px;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:26px;
+    max-width:520px;
+    align-items:end;
+  }
+  .bar-group{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .bar-track{
+    width:100%;height:120px;
+    display:flex;align-items:flex-end;justify-content:center;
+  }
+  .bar{
+    width:70%;
+    background:var(--mint);
+    border-radius:4px 4px 0 0;
+    box-shadow:0 0 22px rgba(94,243,206,.35);
+    transform-origin:bottom;
+    animation:grow 1.1s cubic-bezier(.2,.9,.3,1) both;
+  }
+  .bar-group:nth-child(1) .bar{height:100%;animation-delay:.15s}
+  .bar-group:nth-child(2) .bar{height:42%;animation-delay:.35s}
+  .bar-group:nth-child(3) .bar{height:68%;animation-delay:.55s}
+  .bar-group:nth-child(4) .bar{height:55%;animation-delay:.75s}
+  @keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  .bar-label{
+    font-family:'Archivo',sans-serif;
+    font-variation-settings:'wdth' 112,'wght' 640;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--ink);
+  }
+
+  .foot-note{
+    display:flex;gap:28px;flex-wrap:wrap;
+    font-size:13px;color:var(--muted);
+  }
+  .foot-note span{display:flex;align-items:center;gap:8px}
+  .tick{color:var(--mint);font-size:14px}
+
+  /* ============================ RIGHT / LOGIN ============================ */
+  .login-side{
+    display:flex;align-items:center;justify-content:center;
+    padding:56px 48px;
+  }
+  .card{
+    width:100%;max-width:420px;
+    background:linear-gradient(180deg,var(--panel), var(--navy-2));
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:40px 38px 34px;
+    box-shadow:0 30px 80px rgba(0,0,0,.45);
+    animation:rise .8s cubic-bezier(.2,.9,.3,1) both .2s;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+  .card h2{
+    font-family:'Archivo',sans-serif;
+    font-variation-settings:'wdth' 112,'wght' 700;
+    text-transform:uppercase;letter-spacing:.06em;
+    font-size:22px;margin-bottom:8px;
+  }
+  .card p.lead{font-size:14px;color:var(--muted);margin-bottom:30px;font-weight:300}
+
+  .field{margin-bottom:18px}
+  label{
+    display:block;
+    font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:8px;
+    font-weight:500;
+  }
+  input{
+    width:100%;
+    background:rgba(8,21,39,.7);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--ink);
+    font:400 15px 'Spline Sans',sans-serif;
+    padding:13px 15px;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  input::placeholder{color:rgba(140,163,184,.55)}
+  input:focus{
+    outline:none;
+    border-color:var(--mint);
+    box-shadow:0 0 0 3px rgba(94,243,206,.15);
+  }
+  .row{display:flex;justify-content:space-between;align-items:center;margin:6px 0 24px;font-size:13px}
+  .remember{display:flex;align-items:center;gap:8px;color:var(--muted);cursor:pointer;user-select:none}
+  .remember input{width:15px;height:15px;accent-color:var(--mint)}
+  a.link{color:var(--mint);text-decoration:none}
+  a.link:hover{text-decoration:underline}
+
+  .btn{
+    width:100%;
+    border:none;cursor:pointer;
+    background:var(--mint);
+    color:#06121f;
+    font-family:'Archivo',sans-serif;
+    font-variation-settings:'wdth' 112,'wght' 700;
+    text-transform:uppercase;letter-spacing:.18em;
+    font-size:13px;
+    padding:16px;border-radius:10px;
+    box-shadow:0 8px 28px rgba(94,243,206,.35);
+    transition:transform .15s, box-shadow .15s, background .15s;
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 34px rgba(94,243,206,.45)}
+  .btn:active{transform:none}
+  .btn:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+
+  .divider{
+    display:flex;align-items:center;gap:14px;
+    margin:24px 0;
+    color:var(--muted);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  }
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--line)}
+
+  .btn-ghost{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    width:100%;
+    background:transparent;
+    border:1px solid var(--mint-line);
+    color:var(--mint);
+    font:500 14px 'Spline Sans',sans-serif;
+    padding:14px;border-radius:10px;cursor:pointer;
+    text-decoration:none;
+    transition:background .2s,border-color .2s;
+  }
+  .btn-ghost:hover{background:var(--mint-dim);border-color:var(--mint)}
+
+  .signup{margin-top:26px;text-align:center;font-size:14px;color:var(--muted)}
+
+  .msg{
+    display:none;
+    margin-top:16px;
+    font-size:13px;text-align:center;
+    color:var(--mint);
+  }
+  .msg.show{display:block;animation:pulse 1.4s ease-in-out infinite}
+
+  /* ============================ RESPONSIVE ============================ */
+  @media (max-width:980px){
+    .page{grid-template-columns:1fr}
+    .brand-side{border-right:none;border-bottom:1px solid var(--line);padding:40px 28px}
+    .hero{margin:36px 0}
+    .login-side{padding:44px 20px 64px}
+    .foot-note{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+    <g fill="none" stroke="rgba(94,243,206,.07)" stroke-width="1.4">
+      <circle cx="1290" cy="80" r="260"/>
+      <circle cx="1290" cy="80" r="380"/>
+      <circle cx="60" cy="860" r="240"/>
+      <circle cx="60" cy="860" r="360"/>
+    </g>
+    <line x1="0" y1="620" x2="1440" y2="540" stroke="rgba(94,243,206,.06)" stroke-width="1.2"/>
+    <line x1="480" y1="0" x2="540" y2="900" stroke="rgba(94,243,206,.05)" stroke-width="1.2"/>
+  </svg>
+</div>
+
+<div class="page">
+
+  <!-- ================= LEFT ================= -->
+  <section class="brand-side">
+    <a class="logo" href="#" aria-label="Financial Coach home">
+      <svg class="logo-mark" viewBox="0 0 100 100" aria-hidden="true">
+        <path d="M22 38 Q50 16 78 38"/>
+        <path d="M28 56 Q50 38 72 56"/>
+        <path d="M34 74 Q50 60 66 74"/>
+      </svg>
+      <span class="logo-word">Financial&nbsp;Coach</span>
+    </a>
+
+    <div class="hero">
+      <span class="eyebrow">AI-powered analysis</span>
+      <h1>Stop the manual struggle.<br><span class="accent">Start coaching.</span></h1>
+      <p class="sub">Upload your statements and let AI turn raw transactions into
+        <strong>actionable insights in seconds</strong> — no spreadsheets, no formulas, no late nights.</p>
+
+      <div class="chart" role="img" aria-label="Illustrative bars for income, spending, trends and habits">
+        <div class="bar-group"><div class="bar-track"><div class="bar"></div></div><span class="bar-label">Income</span></div>
+        <div class="bar-group"><div class="bar-track"><div class="bar"></div></div><span class="bar-label">Spending</span></div>
+        <div class="bar-group"><div class="bar-track"><div class="bar"></div></div><span class="bar-label">Trends</span></div>
+        <div class="bar-group"><div class="bar-track"><div class="bar"></div></div><span class="bar-label">Habits</span></div>
+      </div>
+    </div>
+
+    <div class="foot-note">
+      <span><span class="tick">✓</span> Personalized insights</span>
+      <span><span class="tick">✓</span> Identify trends instantly</span>
+      <span><span class="tick">✓</span> Optimized financial health</span>
+    </div>
+  </section>
+
+  <!-- ================= RIGHT ================= -->
+  <section class="login-side">
+    <div class="card">
+      <h2>Welcome back</h2>
+      <p class="lead">Sign in to open your dashboard.</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+
+        <div class="row">
+          <label class="remember"><input type="checkbox" checked> Remember me</label>
+          <a class="link" href="#">Forgot password?</a>
+        </div>
+
+        <button class="btn" type="submit">Sign in</button>
+        <p class="msg" id="msg">Signing you in…</p>
+      </form>
+
+      <div class="divider">or</div>
+
+      <a class="btn-ghost" href="https://financialcoach.streamlit.app/" target="_blank" rel="noopener">
+        Continue to app without signing in →
+      </a>
+
+      <p class="signup">New here? <a class="link" href="https://financialcoach.streamlit.app/" target="_blank" rel="noopener">Create a free account</a></p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const form = document.getElementById('loginForm');
+  const msg  = document.getElementById('msg');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email');
+    const pass  = document.getElementById('password');
+
+    if (!email.value || !email.checkValidity()) { email.focus(); email.style.borderColor = '#ff7a7a'; return; }
+    if (!pass.value) { pass.focus(); pass.style.borderColor = '#ff7a7a'; return; }
+
+    msg.classList.add('show');
+    setTimeout(() => {
+      window.location.href = 'https://financialcoach.streamlit.app/';
+    }, 900);
+  });
+
+  document.querySelectorAll('input').forEach(i =>
+    i.addEventListener('input', () => i.style.borderColor = '')
+  );
+</script>
+
+</body>
+</html>

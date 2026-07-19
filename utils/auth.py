@@ -50,14 +50,51 @@ def current_user_label() -> Optional[str]:
 
 
 def render_login_screen() -> None:
-    """Renders a minimal sign-in gate. Callers are responsible for calling
-    `st.stop()` immediately after this when `not is_logged_in()`, so no
-    gated content executes for an unauthenticated visitor - Streamlit has
-    no routing/middleware layer to do this centrally."""
-    st.title("AI Financial Coach")
-    st.write("Sign in to continue. Your financial data stays private to your signed-in session.")
-    if st.button("Sign in", type="primary", key="auth_sign_in_button"):
-        st.login()
+    """Renders a sign-in gate matching `UI/uploads/financial-coach-login.html`'s
+    two-column brand layout (hero copy + feature checkmarks on the left,
+    a card with the sign-in action on the right), rebuilt in Streamlit's
+    own layout primitives rather than the static HTML file directly -
+    `utils/theme.py`'s injected CSS is what actually makes it look the
+    same (fonts, colors, card borders), not a copy-paste of that markup.
+    Callers are responsible for calling `st.stop()` immediately after this
+    when `not is_logged_in()`, so no gated content executes for an
+    unauthenticated visitor - Streamlit has no routing/middleware layer to
+    do this centrally."""
+    st.markdown(
+        "<span style='display:inline-flex;align-items:center;gap:8px;font-size:11px;"
+        "letter-spacing:.24em;text-transform:uppercase;color:var(--fc-mint);"
+        "border:1px solid var(--fc-mint-line);background:var(--fc-mint-dim);"
+        "padding:7px 16px;border-radius:999px;margin-bottom:18px'>"
+        "✨ AI-powered financial analysis</span>",
+        unsafe_allow_html=True,
+    )
+    left, right = st.columns([1.15, 1], gap="large")
+    with left:
+        st.markdown(
+            "<h1 style='font-size:clamp(32px,4vw,50px);line-height:1.05;margin:0 0 18px'>"
+            "Stop the manual struggle.<br><span style='color:var(--fc-mint)'>Start coaching.</span></h1>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<p style='color:var(--fc-muted);font-size:16px;font-weight:300;line-height:1.6;max-width:44ch'>"
+            "Upload your statements and let your AI coach turn raw transactions into "
+            "<strong style='color:var(--fc-ink);font-weight:500'>actionable insights in seconds</strong> "
+            "&mdash; no spreadsheets, no formulas, no late nights.</p>",
+            unsafe_allow_html=True,
+        )
+        for line in ("Personalized insights", "Trends spotted instantly", "A plan for your money, not just a summary"):
+            st.markdown(
+                f"<div style='display:flex;align-items:center;gap:8px;color:var(--fc-muted);"
+                f"font-size:14px;margin-bottom:8px'><span style='color:var(--fc-mint)'>✓</span>{line}</div>",
+                unsafe_allow_html=True,
+            )
+    with right:
+        with st.container(border=True):
+            st.subheader("Welcome back")
+            st.caption("Sign in to open your dashboard.")
+            if st.button("Sign in", type="primary", key="auth_sign_in_button", width="stretch"):
+                st.login()
+            st.caption("New here? Signing in creates your account automatically — no separate sign-up.")
 
 
 def render_signed_in_sidebar_control() -> None:

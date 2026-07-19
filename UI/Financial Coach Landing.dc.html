@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Spline+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#081527; --navy-2:#0b1e33; --panel:#0d2238;
+    --mint:#5ef3ce; --mint-dim:rgba(94,243,206,.14); --mint-line:rgba(94,243,206,.28);
+    --ink:#e8eff6; --muted:#8ca3b8; --line:rgba(140,163,184,.16); --green:#12c96f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Spline Sans',system-ui,sans-serif;background:var(--navy);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:var(--mint);text-decoration:none}
+  a:hover{color:#8ff8de}
+  ::selection{background:var(--mint);color:#06121f}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  @keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+</style>
+</helmet>
+
+<div ref="{{ rootRef }}" style="position:relative;overflow:hidden">
+
+  <!-- ambient glows -->
+  <div style="position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(1100px 700px at 85% -10%, rgba(94,243,206,.07), transparent 60%),radial-gradient(900px 600px at -10% 110%, rgba(94,243,206,.05), transparent 55%),var(--navy)"></div>
+  <div data-parallax="0.15" style="position:absolute;top:-160px;right:-120px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(94,243,206,.10),transparent 70%);pointer-events:none;z-index:0"></div>
+
+  <!-- ============ NAV ============ -->
+  <nav style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:20px 40px;backdrop-filter:blur(14px);background:rgba(8,21,39,.55);border-bottom:1px solid var(--line)">
+    <a href="#top" style="display:flex;align-items:center;gap:12px;color:var(--ink)">
+      <svg viewBox="0 0 100 100" style="width:32px;height:32px;flex:none"><g fill="none" stroke="#5ef3ce" stroke-width="7" stroke-linecap="round"><path d="M22 38 Q50 16 78 38"/><path d="M28 56 Q50 38 72 56"/><path d="M34 74 Q50 60 66 74"/></g></svg>
+      <span style="font-family:'Archivo',sans-serif;font-variation-settings:'wdth' 118,'wght' 700;letter-spacing:.32em;font-size:12px;text-transform:uppercase">Financial&nbsp;Coach</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:32px">
+      <a href="#how" style="color:var(--muted);font-size:14px">How it works</a>
+      <a href="#features" style="color:var(--muted);font-size:14px">Features</a>
+      <a href="#preview" style="color:var(--muted);font-size:14px">Preview</a>
+      <a href="https://financialcoach.streamlit.app/" target="_blank" rel="noopener" style="font-family:'Archivo',sans-serif;font-variation-settings:'wdth' 112,'wght' 700;text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:#06121f;background:var(--mint);padding:12px 22px;border-radius:10px;box-shadow:0 8px 26px rgba(94,243,206,.3)">Try it free</a>
+    </div>
+  </nav>
+
+  <!-- ============ HERO ============ -->
+  <header id="top" style="position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:180px 40px 60px;text-align:center">
+    <span data-reveal style="display:inline-flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--mint);border:1px solid var(--mint-line);background:var(--mint-dim);padding:9px 18px;border-radius:999px;margin-bottom:32px">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 10px #5ef3ce;animation:pulse 2.4s ease-in-out infinite"></span>
+      AI-powered financial analysis
+    </span>
+    <h1 data-reveal style="font-family:'Archivo',sans-serif;font-variation-settings:'wdth' 116,'wght' 780;text-transform:uppercase;font-size:clamp(44px,7vw,96px);line-height:.98;letter-spacing:.01em;max-width:14ch;margin:0 auto">Stop the manual struggle. <span style="color:var(--mint)">Start coaching.</span></h1>
+    <p data-reveal style="margin:28px auto 0;font-size:clamp(17px,2vw,21px);font-weight:300;line-height:1.6;color:var(--muted);max-width:52ch">Upload your statements and let AI turn raw transactions into <strong style="color:var(--ink);font-weight:500">actionable insights in seconds</strong> — no spreadsheets, no formulas, no late nights.</p>
+    <div data-reveal style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:40px">
+      <a href="https://financialcoach.streamlit.app/" target="_blank" rel="noopener" style="font-family:'Archivo',sans-serif;font-variation-settings:'wdth' 112,'wght' 700;text-transform:uppercase;letter-spacing:.16em;font-size:14px;color:#06121f;background:var(--mint);padding:18px 34px;border-radius:12px;box-shadow:0 12px 34px rgba(94,243,206,.35)">Try it free →</a>
+      <a href="#preview" style="font-family:'Spline Sans',sans-serif;font-weight:500;font-size:15px;color:var(--mint);background:transparent;border:1px solid var(--mint-line);padding:18px 30px;border-radius:12px">Watch it work</a>
+    </div>
+
+    <!-- video frame -->
+    <div data-reveal data-parallax="-0.06" style="position:relative;margin:70px auto 0;max-width:1000px">
+      <div style="position:absolute;inset:-40px;background:radial-gradient(ellipse at center,rgba(94,243,206,.18),transparent 70%);filter:blur(30px);pointer-events:none"></div>
+      <div style="position:relative;border:1px solid var(--mint-line);border-radius:18px;overflow:hidden;background:var(--panel);box-shadow:0 40px 100px rgba(0,0,0,.55)">
+        <div style="display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--line);background:rgba(8,21,39,.6)">
+          <span style="width:11px;height:11px;border-radius:50%;background:#ff5f57"></span>
+          <span style="width:11px;height:11px;border-radius:50%;background:#febc2e"></span>
+          <span style="width:11px;height:11px;border-radius:50%;background:#28c840"></span>
+          <span style="margin-left:14px;font-size:12px;color:var(--muted);letter-spacing:.04em">financialcoach.streamlit.app</span>
+        </div>
+        <video ref="{{ videoRef }}" src="assets/app-demo.mp4" autoplay muted playsinline style="display:block;width:100%;height:auto"></video>
+      </div>
+      <!-- floating chips -->
+      <div data-parallax="0.2" style="position:absolute;top:24%;left:-40px;display:flex;align-items:center;gap:10px;background:rgba(13,34,56,.9);border:1px solid var(--mint-line);border-radius:12px;padding:12px 16px;box-shadow:0 16px 40px rgba(0,0,0,.4);animation:floaty 5s ease-in-out infinite">
+        <span style="font-family:'Archivo';font-variation-settings:'wght' 780;font-size:20px;color:var(--mint)">+18%</span>
+        <span style="font-size:12px;color:var(--muted);line-height:1.3">savings<br>this month</span>
+      </div>
+      <div data-parallax="0.28" style="position:absolute;bottom:20%;right:-36px;display:flex;align-items:center;gap:10px;background:rgba(13,34,56,.9);border:1px solid var(--mint-line);border-radius:12px;padding:12px 16px;box-shadow:0 16px 40px rgba(0,0,0,.4);animation:floaty 6s ease-in-out infinite .8s">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)"></span>
+        <span style="font-size:12px;color:var(--ink)">142 transactions categorized</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ TRUST STRIP ============ -->
+  <div style="position:relative;z-index:1;border-block:1px solid var(--line);margin-top:80px;overflow:hidden;white-space:nowrap;padding:22px 0">
+    <div style="display:inline-flex;gap:64px;animation:marquee 26s linear infinite">
+      <sc-for list="{{ marqueeItems }}" as="m" hint-placeholder-count="12">
+        <span style="font-family:'Archivo';font-variation-settings:'wdth' 108,'wght' 640;font-size:15px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)">{{ m }}</span>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section id="how" style="position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:130px 40px 40px">
+    <div data-reveal style="text-align:center;margin-bottom:70px">
+      <span style="font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--mint)">How it works</span>
+      <h2 style="font-family:'Archivo';font-variation-settings:'wdth' 114,'wght' 760;text-transform:uppercase;font-size:clamp(32px,4.4vw,56px);line-height:1.02;margin-top:16px">Three steps.<br>Zero spreadsheets.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px">
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+        <div data-reveal style="position:relative;background:linear-gradient(180deg,var(--panel),var(--navy-2));border:1px solid var(--line);border-radius:18px;padding:38px 32px 34px;overflow:hidden">
+          <div style="font-family:'Archivo';font-variation-settings:'wght' 780;font-size:64px;color:var(--mint-dim);line-height:1;position:absolute;top:14px;right:22px">{{ s.no }}</div>
+          <div style="width:46px;height:46px;border-radius:12px;background:var(--mint-dim);border:1px solid var(--mint-line);display:flex;align-items:center;justify-content:center;margin-bottom:22px">{{ s.icon }}</div>
+          <h3 style="font-family:'Archivo';font-variation-settings:'wght' 700;text-transform:uppercase;letter-spacing:.04em;font-size:19px;margin-bottom:12px">{{ s.title }}</h3>
+          <p style="font-size:15px;line-height:1.6;color:var(--muted);font-weight:300">{{ s.body }}</p>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- ============ FEATURES ============ -->
+  <section id="features" style="position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:120px 40px 40px">
+    <div data-reveal style="text-align:center;margin-bottom:70px">
+      <span style="font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--mint)">What you see</span>
+      <h2 style="font-family:'Archivo';font-variation-settings:'wdth' 114,'wght' 760;text-transform:uppercase;font-size:clamp(32px,4.4vw,56px);line-height:1.02;margin-top:16px">Every number,<br>finally in focus.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+      <sc-for list="{{ features }}" as="f" hint-placeholder-count="4">
+        <div data-reveal style="background:linear-gradient(180deg,var(--panel),var(--navy-2));border:1px solid var(--line);border-radius:18px;padding:30px 26px 34px;display:flex;flex-direction:column">
+          <div style="height:110px;display:flex;align-items:flex-end;justify-content:center;gap:9px;margin-bottom:24px">
+            <sc-for list="{{ f.bars }}" as="h" hint-placeholder-count="4">
+              <div data-bar style="width:16px;height:{{ h }};background:var(--mint);border-radius:4px 4px 0 0;box-shadow:0 0 18px rgba(94,243,206,.35);transform-origin:bottom;transform:scaleY(0);transition:transform .9s cubic-bezier(.2,.9,.3,1)"></div>
+            </sc-for>
+          </div>
+          <h3 style="font-family:'Archivo';font-variation-settings:'wght' 700;text-transform:uppercase;letter-spacing:.05em;font-size:16px;margin-bottom:10px">{{ f.title }}</h3>
+          <p style="font-size:14px;line-height:1.55;color:var(--muted);font-weight:300">{{ f.body }}</p>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- ============ PREVIEW ============ -->
+  <section id="preview" style="position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:120px 40px 40px">
+    <div data-reveal style="text-align:center;margin-bottom:56px">
+      <span style="font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--mint)">See it in action</span>
+      <h2 style="font-family:'Archivo';font-variation-settings:'wdth' 114,'wght' 760;text-transform:uppercase;font-size:clamp(32px,4.4vw,56px);line-height:1.02;margin-top:16px">Your dashboard, live.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:auto auto;gap:20px">
+
+      <!-- MAIN DASHBOARD PANEL -->
+      <div data-reveal style="grid-row:span 2;position:relative;border:1px solid var(--mint-line);border-radius:18px;overflow:hidden;background:linear-gradient(180deg,var(--panel),var(--navy-2));box-shadow:0 30px 70px rgba(0,0,0,.45)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--line)">
+          <div>
+            <div style="font-family:'Archivo';font-variation-settings:'wght' 720;text-transform:uppercase;letter-spacing:.05em;font-size:14px">Financial overview</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px">Last 6 months · updated just now</div>
+          </div>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-size:11px;color:var(--mint);border:1px solid var(--mint-line);background:var(--mint-dim);padding:6px 12px;border-radius:999px"><span style="width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px #5ef3ce"></span>Live</span>
+        </div>
+        <!-- KPI row -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="3">
+            <div style="padding:20px 24px;border-right:1px solid var(--line)">
+              <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">{{ k.label }}</div>
+              <div style="font-family:'Archivo';font-variation-settings:'wght' 760;font-size:26px;margin-top:8px">{{ k.value }}</div>
+              <div style="font-size:12px;margin-top:4px;color:{{ k.color }}">{{ k.delta }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <!-- balance area chart -->
+        <div style="padding:24px 24px 20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+            <span style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Net balance trend</span>
+            <span style="font-family:'Archivo';font-variation-settings:'wght' 720;font-size:16px;color:var(--mint)">+$4,280</span>
+          </div>
+          <svg viewBox="0 0 520 150" preserveAspectRatio="none" style="width:100%;height:150px;display:block">
+            <defs>
+              <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#5ef3ce" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#5ef3ce" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g stroke="rgba(140,163,184,.12)" stroke-width="1">
+              <line x1="0" y1="38" x2="520" y2="38"/><line x1="0" y1="75" x2="520" y2="75"/><line x1="0" y1="112" x2="520" y2="112"/>
+            </g>
+            <path d="M0,120 L86,96 L173,104 L260,64 L346,72 L433,38 L520,26 L520,150 L0,150 Z" fill="url(#areaFill)"/>
+            <path d="M0,120 L86,96 L173,104 L260,64 L346,72 L433,38 L520,26" fill="none" stroke="#5ef3ce" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="520" cy="26" r="4.5" fill="#5ef3ce"/>
+          </svg>
+          <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:var(--muted)">
+            <sc-for list="{{ months }}" as="mo" hint-placeholder-count="7"><span>{{ mo }}</span></sc-for>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPENDING BREAKDOWN -->
+      <div data-reveal style="position:relative;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:linear-gradient(180deg,var(--panel),var(--navy-2));padding:22px 24px">
+        <div style="font-family:'Archivo';font-variation-settings:'wght' 720;text-transform:uppercase;letter-spacing:.05em;font-size:13px">Where it goes</div>
+        <div style="display:flex;flex-direction:column;gap:14px;margin-top:18px">
+          <sc-for list="{{ categories }}" as="c" hint-placeholder-count="4">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--ink)">{{ c.name }}</span><span style="color:var(--muted)">{{ c.pct }}</span></div>
+              <div style="height:8px;border-radius:999px;background:rgba(140,163,184,.12);overflow:hidden"><div style="height:100%;width:{{ c.pct }};background:linear-gradient(90deg,#5ef3ce,#12c96f);border-radius:999px;box-shadow:0 0 12px rgba(94,243,206,.4)"></div></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- AI INSIGHT -->
+      <div data-reveal style="position:relative;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:linear-gradient(180deg,var(--panel),var(--navy-2));padding:22px 24px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <span style="width:30px;height:30px;border-radius:9px;background:var(--mint-dim);border:1px solid var(--mint-line);display:flex;align-items:center;justify-content:center;color:var(--mint)">✳</span>
+          <span style="font-family:'Archivo';font-variation-settings:'wght' 720;text-transform:uppercase;letter-spacing:.05em;font-size:13px">AI insight</span>
+        </div>
+        <p style="font-size:14px;line-height:1.6;color:var(--ink);font-weight:300">You spent <strong style="color:var(--mint);font-weight:500">23% less on dining</strong> than last month. Keep it up and you're on track to save an extra <strong style="color:var(--mint);font-weight:500">$310</strong> by December.</p>
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--muted);border:1px solid var(--line);padding:5px 11px;border-radius:999px">Dining ↓</span>
+          <span style="font-size:11px;color:var(--muted);border:1px solid var(--line);padding:5px 11px;border-radius:999px">Savings ↑</span>
+          <span style="font-size:11px;color:var(--muted);border:1px solid var(--line);padding:5px 11px;border-radius:999px">On track</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FINAL CTA ============ -->
+  <section style="position:relative;z-index:1;max-width:1200px;margin:120px auto 0;padding:0 40px">
+    <div data-reveal style="position:relative;overflow:hidden;border-radius:24px;border:1px solid var(--mint-line);background:linear-gradient(160deg,#0d2238,#081527);padding:96px 48px;text-align:center">
+      <div style="position:absolute;inset:0;background:radial-gradient(700px 400px at 50% 0%,rgba(94,243,206,.14),transparent 65%);pointer-events:none"></div>
+      <h2 style="position:relative;font-family:'Archivo';font-variation-settings:'wdth' 116,'wght' 780;text-transform:uppercase;font-size:clamp(36px,5.5vw,72px);line-height:1;letter-spacing:.01em">Take control<br><span style="color:var(--mint)">of your money.</span></h2>
+      <p style="position:relative;margin:24px auto 0;font-size:18px;color:var(--muted);font-weight:300;max-width:44ch">Free to start. No card required. Your first insights are seconds away.</p>
+      <a href="https://financialcoach.streamlit.app/" target="_blank" rel="noopener" style="position:relative;display:inline-block;margin-top:40px;font-family:'Archivo';font-variation-settings:'wdth' 112,'wght' 700;text-transform:uppercase;letter-spacing:.16em;font-size:15px;color:#06121f;background:var(--mint);padding:20px 44px;border-radius:12px;box-shadow:0 14px 40px rgba(94,243,206,.4)">Start coaching free →</a>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer style="position:relative;z-index:1;margin-top:100px;border-top:1px solid var(--line);padding:48px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px">
+    <a href="#top" style="display:flex;align-items:center;gap:12px;color:var(--ink)">
+      <svg viewBox="0 0 100 100" style="width:28px;height:28px"><g fill="none" stroke="#5ef3ce" stroke-width="7" stroke-linecap="round"><path d="M22 38 Q50 16 78 38"/><path d="M28 56 Q50 38 72 56"/><path d="M34 74 Q50 60 66 74"/></g></svg>
+      <span style="font-family:'Archivo';font-variation-settings:'wdth' 118,'wght' 700;letter-spacing:.32em;font-size:12px;text-transform:uppercase">Financial&nbsp;Coach</span>
+    </a>
+    <span style="font-size:13px;color:var(--muted)">© 2026 Financial Coach — AI-powered financial analysis.</span>
+    <a href="https://financialcoach.streamlit.app/" target="_blank" rel="noopener" style="font-size:13px">Open the app →</a>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      rootRef: (el) => { this._root = el; },
+      videoRef: (el) => { if (el) { el.muted = true; el.volume = 0; el.defaultMuted = true; } },
+      marqueeItems: ["Upload","Categorize","Analyze","Coach","Trends","Habits","Budgets","Insights","Upload","Categorize","Analyze","Coach","Trends","Habits","Budgets","Insights"],
+      kpis: [
+        { label: "Income", value: "$8,420", delta: "▲ 6.2% vs last mo", color: "#12c96f" },
+        { label: "Spending", value: "$4,140", delta: "▼ 8.1% vs last mo", color: "#5ef3ce" },
+        { label: "Saved", value: "$4,280", delta: "▲ 18% vs last mo", color: "#12c96f" },
+      ],
+      months: ["Jul","Aug","Sep","Oct","Nov","Dec","Jan"],
+      categories: [
+        { name: "Housing", pct: "38%" },
+        { name: "Groceries", pct: "22%" },
+        { name: "Transport", pct: "16%" },
+        { name: "Dining", pct: "11%" },
+      ],
+      steps: [
+        { no: "01", icon: "⬆", title: "Upload", body: "Drop in a bank or card statement — CSV or PDF. It never leaves your session." },
+        { no: "02", icon: "◎", title: "Analyze", body: "AI reads every line, categorizes each transaction and detects your patterns." },
+        { no: "03", icon: "✳", title: "Coach", body: "Get plain-language insights, trends and the next best move for your money." },
+      ],
+      features: [
+        { title: "Income", body: "See exactly what comes in, when, and how steady it really is.", bars: ["100%","62%","84%","70%"] },
+        { title: "Spending", body: "Every dollar categorized so nothing hides in the noise.", bars: ["48%","100%","66%","82%"] },
+        { title: "Trends", body: "Month-over-month shifts surfaced before they become habits.", bars: ["40%","58%","76%","100%"] },
+        { title: "Habits", body: "Recurring behaviors flagged with gentle, specific nudges.", bars: ["70%","52%","90%","64%"] },
+      ],
+    };
+  }
+  componentDidMount() {
+    const root = this._root;
+    if (!root) return;
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // reveals
+    const reveals = root.querySelectorAll("[data-reveal]");
+    reveals.forEach((el) => {
+      if (reduce) return;
+      el.style.opacity = "0";
+      el.style.transform = "translateY(44px)";
+      el.style.transition = "opacity .7s cubic-bezier(.2,.9,.3,1), transform .7s cubic-bezier(.2,.9,.3,1)";
+    });
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.style.opacity = "1";
+          e.target.style.transform = "none";
+          // trigger bars within
+          e.target.querySelectorAll("[data-bar]").forEach((b, i) => {
+            setTimeout(() => { b.style.transform = "scaleY(1)"; }, 120 + i * 110);
+          });
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.18, rootMargin: "0px 0px -8% 0px" });
+    reveals.forEach((el) => io.observe(el));
+
+    // bars that are not inside a data-reveal (features cards are reveals, handled above)
+    // parallax
+    const px = Array.from(root.querySelectorAll("[data-parallax]")).map((el) => ({ el, k: parseFloat(el.getAttribute("data-parallax")) || 0 }));
+    let ticking = false;
+    const onScroll = () => {
+      if (reduce || ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        px.forEach(({ el, k }) => { el.style.transform = `translateY(${y * k}px)`; });
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    this._onScroll = onScroll;
+    onScroll();
+  }
+  componentWillUnmount() {
+    if (this._onScroll) window.removeEventListener("scroll", this._onScroll);
+  }
+}
+</script>
+</body>
+</html>
