@@ -42,7 +42,11 @@ def expected_allocated_amount(entry: dict, roadmap: dict) -> Optional[float]:
     if key == "debt":
         return allocation["debt_extra_payment"]
     if key == "savings":
-        return allocation["savings_contribution"]
+        # SavingsStrategyAgent narrates both destinations for surplus money
+        # (utils/roadmap.py Step 6 makes them mutually exclusive, so this is
+        # never double-counting the same rupee) - its allocated_amount is
+        # the combined total it is accountable for, not just one field.
+        return allocation["savings_contribution"] + allocation["investment_contribution"]
     if key == "goal":
         goal_name = entry["result"]["supporting_tables"]["goal"]["name"]
         return allocation["goal_contributions"].get(goal_name, 0.0)
@@ -101,11 +105,11 @@ def check_zero_allocation_not_recommended(entries, roadmap, **_) -> List[dict]:
         expected = expected_allocated_amount(entry, roadmap)
         actual = entry["result"].get("allocated_amount")
         if expected == 0 and actual and actual > 0:
-            violations.append(_violation(entry, f"reports a positive allocated_amount ({actual}) though the roadmap allocated $0"))
+            violations.append(_violation(entry, f"reports a positive allocated_amount ({actual}) though the roadmap allocated ₹0"))
         for action_id in entry["result"].get("recommends_action_ids") or []:
             action = action_by_id.get(action_id)
             if action is not None and action.get("monthly_amount", 0) <= 0:
-                violations.append(_violation(entry, f"recommends {action_id}, which the roadmap allocated $0"))
+                violations.append(_violation(entry, f"recommends {action_id}, which the roadmap allocated ₹0"))
     return violations
 
 

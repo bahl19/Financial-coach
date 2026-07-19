@@ -5,6 +5,7 @@ concerning the roadmap allocator itself (not yet the specialists or graph -
 see test_specialist_agents.py and test_graph.py for those).
 """
 
+import copy
 import json
 from pathlib import Path
 
@@ -83,7 +84,10 @@ def test_distributed_allocation_never_exceeds_allocatable_surplus(path):
         pytest.skip(f"{path.name} has unresolved inputs")
 
     allocation = roadmap["allocation"]
-    distributed = allocation["debt_extra_payment"] + sum(allocation["goal_contributions"].values()) + allocation["savings_contribution"]
+    distributed = (
+        allocation["debt_extra_payment"] + sum(allocation["goal_contributions"].values())
+        + allocation["savings_contribution"] + allocation["investment_contribution"]
+    )
     assert distributed <= allocatable_surplus + 1e-9
 
 
@@ -153,7 +157,7 @@ def test_build_roadmap_is_deterministic_for_the_same_input():
 # allocation-aware feasibility at that point but discarded it, so the action
 # itself never reflected the shortfall (only the goal specialist's own prose
 # narrative did). See income_drop_rising_dining: "New laptop" needs
-# $400/month but only $377.17 remains once the starter buffer takes its 50%
+# ₹400/month but only ₹377.17 remains once the starter buffer takes its 50%
 # share first.
 # --------------------------------------------------------------------------
 
@@ -163,7 +167,7 @@ def test_underfunded_goal_action_is_elevated_to_high_severity_this_month():
     action = next(a for a in roadmap["actions"] if a["action_id"] == "ACTION_FUND_GOAL_NEW_LAPTOP")
     assert action["severity"] == "high"
     assert action["urgency"] == "this_month"
-    assert "short of the $400" in action["rationale"]
+    assert "short of the ₹400" in action["rationale"]
     # amount actually allocated is still exactly what the ledger had left,
     # not the goal's full requirement - elevation must not change the amount.
     assert roadmap["allocation"]["goal_contributions"]["New laptop"] == pytest.approx(377.16666666666674)
@@ -176,6 +180,76 @@ def test_fully_funded_goal_action_keeps_medium_severity_next_90_days():
     assert action["severity"] == "medium"
     assert action["urgency"] == "next_90_days"
     assert "short of" not in action["rationale"]
+
+
+# --------------------------------------------------------------------------
+# Step 6 (remainder routing): investment_cagr beating savings_apy by at
+# least _CAGR_ADVANTAGE_THRESHOLD_PERCENT routes the remainder to
+# ACTION_GROW_INVESTMENT/investment_contribution instead of
+# ACTION_GROW_SAVINGS/savings_contribution. Absent investment data, or a
+# CAGR that doesn't clear the margin, must behave exactly as before.
+# --------------------------------------------------------------------------
+
+def _with_investment(profile, current_investments, investment_cagr):
+    profile = copy.deepcopy(profile)
+    profile["current_investments"] = current_investments
+    profile["assumptions"] = {**profile["assumptions"], "investment_cagr": investment_cagr}
+    return profile
+
+
+def test_remainder_routes_to_investment_when_cagr_clears_the_margin():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    profile = _with_investment(profile, current_investments=50_000.0, investment_cagr=0.12)  # savings_apy is 0.04
+    _, _, _, _, roadmap = _run_pipeline(profile)
+    allocation = roadmap["allocation"]
+
+    assert allocation["investment_contribution"] > 0
+    action_ids = {a["action_id"] for a in roadmap["actions"]}
+    assert rm.ACTION_GROW_INVESTMENT in action_ids
+    assert rm.ACTION_GROW_SAVINGS not in action_ids
+    # the starter-buffer/goal portion of savings_contribution is untouched -
+    # only the final "remainder" step's destination changed.
+    assert allocation["savings_contribution"] == 0.0  # this fixture needs no starter buffer
+
+
+def test_remainder_stays_in_savings_when_cagr_does_not_clear_the_margin():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    # 0.5 points above savings_apy (0.04 -> 0.045) - below the 1.0-point margin.
+    profile = _with_investment(profile, current_investments=50_000.0, investment_cagr=0.045)
+    _, _, _, _, roadmap = _run_pipeline(profile)
+    allocation = roadmap["allocation"]
+
+    assert allocation["investment_contribution"] == 0.0
+    action_ids = {a["action_id"] for a in roadmap["actions"]}
+    assert rm.ACTION_GROW_SAVINGS in action_ids
+    assert rm.ACTION_GROW_INVESTMENT not in action_ids
+
+
+def test_remainder_stays_in_savings_when_investment_data_is_absent():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    assert profile.get("current_investments") is None
+    assert profile["assumptions"].get("investment_cagr") is None
+    _, _, _, _, roadmap = _run_pipeline(profile)
+    assert roadmap["allocation"]["investment_contribution"] == 0.0
+    assert rm.ACTION_GROW_INVESTMENT not in {a["action_id"] for a in roadmap["actions"]}
+
+
+def test_starter_buffer_is_never_routed_to_investment_even_with_a_winning_cagr():
+    """An emergency buffer needs to be liquid and stable - it must stay in
+    savings_contribution regardless of how favorable investment_cagr is."""
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    profile = copy.deepcopy(profile)
+    profile["current_savings"] = 500.0  # forces emergency_fund_months well below the 3-month target
+    profile["current_investments"] = 50_000.0
+    profile["assumptions"] = {**profile["assumptions"], "investment_cagr": 0.15}  # far above savings_apy (0.04)
+
+    snapshot, _, findings, risks, roadmap = _run_pipeline(profile)
+    assert snapshot["metrics"]["emergency_fund_months"] < profile["assumptions"]["emergency_fund_months"]
+    starter_action = next(a for a in roadmap["actions"] if a["action_id"] == rm.ACTION_STARTER_BUFFER)
+    assert roadmap["allocation"]["savings_contribution"] >= starter_action["monthly_amount"]
+    # the leftover *after* the starter buffer is still free to go to investment
+    assert roadmap["allocation"]["investment_contribution"] > 0
+    assert rm.ACTION_GROW_INVESTMENT in {a["action_id"] for a in roadmap["actions"]}
 
 
 # --------------------------------------------------------------------------
@@ -219,7 +293,8 @@ def test_missing_monthly_income_produces_the_resolve_inputs_action_only():
     roadmap = rm.build_roadmap(profile, snapshot, [], [])
     assert [a["action_id"] for a in roadmap["actions"]] == [rm.ACTION_RESOLVE_INPUTS]
     assert roadmap["allocation"] == {
-        "buffer_reserved": 0.0, "debt_extra_payment": 0.0, "goal_contributions": {}, "savings_contribution": 0.0,
+        "buffer_reserved": 0.0, "debt_extra_payment": 0.0, "goal_contributions": {},
+        "savings_contribution": 0.0, "investment_contribution": 0.0,
     }
 
 

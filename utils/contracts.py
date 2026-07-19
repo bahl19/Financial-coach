@@ -73,6 +73,7 @@ class PlanningAssumptions(TypedDict):
     savings_ratio: float
     savings_apy: float
     emergency_fund_months: int
+    investment_cagr: Optional[float]  # rate the user reports currently earning on current_investments
 
 
 class FinancialProfile(TypedDict):
@@ -80,6 +81,11 @@ class FinancialProfile(TypedDict):
     transactions: List[Transaction]
     monthly_income: Optional[float]
     current_savings: Optional[float]
+    # User-confirmed monthly expenses, overriding the transaction-derived
+    # average everywhere downstream when present (None = use the derived
+    # average, today's behavior unchanged).
+    confirmed_monthly_expenses: Optional[float]
+    current_investments: Optional[float]  # a fact (like current_savings), not a rate - paired with assumptions.investment_cagr
     debts: List[Debt]
     goals: List[Goal]
     constraints: Constraints
@@ -124,6 +130,10 @@ class SnapshotMetrics(TypedDict):
     total_debt: float
     period: Optional[str]
     is_partial_period: bool
+    # current_savings + current_investments - total_debt. None only when
+    # current_savings itself is unknown; an absent current_investments
+    # contributes 0 (a real, common "no investments" fact), not None.
+    net_worth: Optional[float]
 
 
 class FinancialSnapshot(TypedDict):
@@ -219,6 +229,7 @@ class RoadmapAllocation(TypedDict):
     debt_extra_payment: float
     goal_contributions: Dict[str, float]
     savings_contribution: float
+    investment_contribution: float  # 0.0 unless investment_cagr meaningfully beats savings_apy (utils/roadmap.py)
 
 
 class Roadmap(TypedDict):
@@ -255,6 +266,7 @@ class CoachSummary(TypedDict):
 class TrackerRow(TypedDict):
     month: str
     planned_savings: float
+    planned_investment: float
     extra_debt_payment: float
     goal_contributions: float
 
@@ -278,12 +290,13 @@ def default_assumptions() -> PlanningAssumptions:
     they are in effect rather than applying them silently.
     """
     return {
-        "currency": "USD",
+        "currency": "INR",
         "needs_ratio": 0.50,
         "wants_ratio": 0.30,
         "savings_ratio": 0.20,
         "savings_apy": 0.04,
         "emergency_fund_months": 3,
+        "investment_cagr": None,
     }
 
 
@@ -319,6 +332,10 @@ def validate_assumptions(assumptions: PlanningAssumptions) -> List[str]:
     emergency_fund_months = assumptions.get("emergency_fund_months")
     if emergency_fund_months is not None and emergency_fund_months < 0:
         issues.append(f"emergency_fund_months must be >= 0, got {emergency_fund_months}")
+
+    investment_cagr = assumptions.get("investment_cagr")
+    if investment_cagr is not None and not (0.0 <= investment_cagr <= 1.0):
+        issues.append(f"investment_cagr must be between 0 and 1, got {investment_cagr}")
 
     return issues
 
@@ -366,6 +383,14 @@ def validate_profile(profile: FinancialProfile) -> List[str]:
     current_savings = profile.get("current_savings")
     if current_savings is not None and current_savings < 0:
         issues.append(f"current_savings must be >= 0, got {current_savings}")
+
+    confirmed_monthly_expenses = profile.get("confirmed_monthly_expenses")
+    if confirmed_monthly_expenses is not None and confirmed_monthly_expenses < 0:
+        issues.append(f"confirmed_monthly_expenses must be >= 0, got {confirmed_monthly_expenses}")
+
+    current_investments = profile.get("current_investments")
+    if current_investments is not None and current_investments < 0:
+        issues.append(f"current_investments must be >= 0, got {current_investments}")
 
     for i, debt in enumerate(profile.get("debts") or []):
         issues.extend(_validate_debt(debt, debt.get("name") or f"debts[{i}]"))

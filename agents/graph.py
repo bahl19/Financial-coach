@@ -102,12 +102,22 @@ def budget_node(state: GraphState) -> dict:
 
 def savings_node(state: GraphState) -> dict:
     roadmap = state["roadmap_result"]
+    profile = state["profile"]
     monthly_cashflow = state["spending_result"]["supporting_tables"]["monthly_cashflow"]
-    action = _find_action_by_id(roadmap, rm.ACTION_GROW_SAVINGS) or _find_action_by_id(roadmap, rm.ACTION_STARTER_BUFFER)
+    action = (
+        _find_action_by_id(roadmap, rm.ACTION_GROW_SAVINGS)
+        or _find_action_by_id(roadmap, rm.ACTION_GROW_INVESTMENT)
+        or _find_action_by_id(roadmap, rm.ACTION_STARTER_BUFFER)
+    )
+    assumptions = profile.get("assumptions") or {}
     result = SavingsStrategyAgent().run(
         monthly_cashflow=monthly_cashflow,
-        current_savings=state["profile"].get("current_savings") or 0.0,
+        current_savings=profile.get("current_savings") or 0.0,
         savings_contribution=roadmap["allocation"]["savings_contribution"],
+        savings_apy=assumptions.get("savings_apy") or 0.0,
+        investment_contribution=roadmap["allocation"]["investment_contribution"],
+        current_investments=profile.get("current_investments") or 0.0,
+        investment_cagr=assumptions.get("investment_cagr"),
         action_id=action["action_id"] if action else None,
         finding_refs=action["finding_refs"] if action else [],
     )

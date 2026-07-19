@@ -34,6 +34,20 @@ def validate_assumption_updates(profile: FinancialProfile, updates: dict) -> Lis
     return validate_assumptions(adjusted["assumptions"])
 
 
+def apply_expense_reduction(profile: FinancialProfile, categories_to_reduce: set, reduction_fraction: float) -> FinancialProfile:
+    """Returns a new FinancialProfile with every expense transaction in
+    `categories_to_reduce` scaled down by `reduction_fraction` (e.g. 0.1 for
+    a 10% cut) - never mutates `profile`. Which categories count as
+    "discretionary" is the caller's decision to make and pass in - this
+    module depends on Component 1 (contracts) only, per its own docstring,
+    so it does not import utils.finance_calc.NEEDS_CATS/SAVINGS_CATS itself."""
+    adjusted = copy.deepcopy(profile)
+    for transaction in adjusted.get("transactions") or []:
+        if transaction.get("category") in categories_to_reduce and transaction.get("amount", 0) < 0:
+            transaction["amount"] = transaction["amount"] * (1 - reduction_fraction)
+    return adjusted
+
+
 _COMPARISON_METRIC_KEYS = (
     "gross_surplus", "allocatable_surplus", "savings_rate_percent",
     "debt_to_income_percent", "emergency_fund_months", "health_score",

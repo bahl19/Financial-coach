@@ -107,10 +107,11 @@ def test_tracker_row_totals_never_exceed_distributed_allocation(path):
     _, _, _, _, roadmap, _ = _run_pipeline(profile)
     allocation = roadmap["allocation"]
     distributed_total = (
-        allocation["debt_extra_payment"] + allocation["savings_contribution"] + sum(allocation["goal_contributions"].values())
+        allocation["debt_extra_payment"] + allocation["savings_contribution"] + allocation["investment_contribution"]
+        + sum(allocation["goal_contributions"].values())
     )
     for row in rp.build_tracker(roadmap):
-        row_total = row["planned_savings"] + row["extra_debt_payment"] + row["goal_contributions"]
+        row_total = row["planned_savings"] + row["planned_investment"] + row["extra_debt_payment"] + row["goal_contributions"]
         assert row_total <= distributed_total + 1e-9
         assert "buffer_reserved" not in row
 

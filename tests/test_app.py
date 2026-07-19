@@ -22,7 +22,7 @@ from utils import finance_calc as fc
 from utils import ingestion
 
 
-def _load_sample_and_analyze(at: AppTest, monthly_income: float = 6200.0) -> AppTest:
+def _load_sample_and_analyze(at: AppTest, monthly_income: float = 75000.0) -> AppTest:
     at.run()
     at.sidebar.button(key="load_sample_button").click().run()
     at.number_input(key="monthly_income_input").set_value(monthly_income).run()
@@ -41,7 +41,21 @@ def test_full_sample_path_works_offline_with_no_exception():
     at = AppTest.from_file("app.py", default_timeout=30)
     _load_sample_and_analyze(at)
     assert not at.exception
-    assert len(at.tabs) == 7
+    # 7 analysis tabs (Overview..Chat) + 5 Scenario Comparison sub-tabs -
+    # at.tabs collects tabs globally across the whole script, not scoped to
+    # one st.tabs() call, so this checks both groups' labels are present
+    # rather than a single flat count.
+    tab_labels = [t.label for t in at.tabs]
+    for label in (
+        "\U0001f4ca Overview", "\U0001f9fe Spending", "\U0001f4b3 Debt Payoff", "\U0001f3e6 Savings",
+        "\U0001f4cb Budget", "\U0001f3af Goals", "\U0001f4ac Ask the Coach",
+    ):
+        assert label in tab_labels
+    for label in (
+        "Plan assumptions", "Idle savings vs. investing", "Cut discretionary spending",
+        "Prepay debt vs. invest", "FD / PPF / SIP for a goal",
+    ):
+        assert label in tab_labels
 
 
 # --------------------------------------------------------------------------
@@ -53,7 +67,15 @@ def test_analyze_button_disabled_until_monthly_income_is_set():
     at.run()
     at.sidebar.button(key="load_sample_button").click().run()
     assert not at.exception
-    # monthly_income defaults to 0.0 in the widget -> None in the profile - disabled.
+    # The bundled sample data has income transactions, so Step 3's income
+    # field is pre-filled from the most recent one (see
+    # app.py::_suggest_monthly_income) rather than defaulting to 0 - the
+    # button is enabled immediately, which is the point of the pre-fill.
+    assert not at.button(key="analyze_button").disabled
+
+    # Explicitly zeroing income (the case the pre-fill can't rescue - no
+    # income transaction, or the user clears the field) must still gate.
+    at.number_input(key="monthly_income_input").set_value(0.0).run()
     assert at.button(key="analyze_button").disabled
     assert len(at.tabs) == 0
     assert not any(h.value == "Step 4 - Analysis" for h in at.header)
@@ -63,11 +85,23 @@ def test_analyze_button_enables_once_income_is_confirmed_and_analysis_runs():
     at = AppTest.from_file("app.py", default_timeout=30)
     at.run()
     at.sidebar.button(key="load_sample_button").click().run()
-    at.number_input(key="monthly_income_input").set_value(6200.0).run()
+    at.number_input(key="monthly_income_input").set_value(75000.0).run()
     assert not at.button(key="analyze_button").disabled
     at.button(key="analyze_button").click().run()
     assert not at.exception
     assert any(h.value == "Step 4 - Analysis" for h in at.header)
+
+
+def test_monthly_income_is_prefilled_from_the_most_recent_income_transaction():
+    """Closes a real usability gap: Step 3 used to default income to 0 and
+    ask the user to type a number from scratch that could silently disagree
+    with the just-uploaded statement. It now suggests the most recent
+    Income-category transaction's amount as a starting point instead."""
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+    at.sidebar.button(key="load_sample_button").click().run()
+    assert not at.exception
+    assert at.number_input(key="monthly_income_input").value == 75000.0
 
 
 # --------------------------------------------------------------------------
@@ -200,6 +234,26 @@ def test_validator_fallback_is_surfaced_as_a_warning():
     at.run()
     assert not at.exception
     assert any("consistency check" in w.value for w in at.warning)
+
+
+# --------------------------------------------------------------------------
+# Scenario Comparison: "cut discretionary spending" - bug found while
+# smoke-testing this feature. A confirmed_monthly_expenses override (Step 3
+# pre-fills and confirms this for every profile) shadowed the scenario's
+# transaction-level cut entirely, since calculate_financial_snapshot() reads
+# the override instead of recomputing from the (now-reduced) transactions -
+# the comparison silently showed zero effect no matter the cut percentage.
+# --------------------------------------------------------------------------
+
+def test_cut_discretionary_spending_scenario_actually_changes_the_comparison():
+    at = _load_sample_and_analyze(AppTest.from_file("app.py", default_timeout=30))
+    assert not at.exception
+    assert at.session_state["pipeline_inputs"][0].get("confirmed_monthly_expenses") is not None  # the shadowing precondition
+
+    dataframes = at.tabs[9].dataframe  # "Cut discretionary spending" sub-tab
+    assert len(dataframes) == 1
+    comparison_df = dataframes[0].value
+    assert comparison_df.loc["Gross surplus", "delta"] > 0  # cutting spending must raise surplus, not leave it at 0
 
 
 # --------------------------------------------------------------------------

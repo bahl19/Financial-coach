@@ -29,6 +29,7 @@
     "goal_contributions": {
       "Vacation fund": 320.0
     },
+    "investment_contribution": 0.0,
     "savings_contribution": 4152.333333
   },
   "snapshot_metrics": {
@@ -39,6 +40,7 @@
     "gross_surplus": 5192.333333,
     "is_partial_period": true,
     "monthly_surplus": 5192.333333,
+    "net_worth": 9000.0,
     "period": "2026-05",
     "required_commitments": 220.0,
     "savings_rate_percent": 63.321138,

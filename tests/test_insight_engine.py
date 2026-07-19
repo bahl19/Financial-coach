@@ -105,7 +105,7 @@ def test_percent_change_sign_matches_direction_even_with_a_negative_baseline():
 def test_sharp_decrease_in_an_essential_category_is_not_labeled_positive():
     """Regression test for a bug found during Phase 6's manual golden-
     fixture review: a sharp decrease in Healthcare spend (negative_cashflow's
-    fixture drops from $260 to $0) was labeled severity="positive" with
+    fixture drops from ₹260 to ₹0) was labeled severity="positive" with
     "Keep up the trend" - actively bad advice, since a healthcare spending
     drop could mean skipped care, not disciplined saving. Essential/needs
     categories (Rent/Mortgage, Groceries, Utilities, Insurance, Healthcare,

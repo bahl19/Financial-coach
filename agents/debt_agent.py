@@ -20,7 +20,7 @@ class DebtAnalyzerAgent(BaseAgent):
                 # float (0.0 with no debts), never None - allocated_amount must
                 # match it exactly here too. None is reserved for agents that
                 # never allocate money at all (spending, budget); debt does
-                # allocate, just $0 in this case, and consistency checks (Phase 4)
+                # allocate, just ₹0 in this case, and consistency checks (Phase 4)
                 # treat "None" and "0.0" as different claims.
                 "allocated_amount": extra_debt_payment,
                 "why_allocated": action_id,
@@ -36,16 +36,16 @@ class DebtAnalyzerAgent(BaseAgent):
 
         summary = (
             f"Avalanche plan (highest APR first): payoff in {avalanche['months_to_payoff']} months, "
-            f"total interest ${avalanche['total_interest']:,.0f}, order: {avalanche['payoff_order']}\n"
+            f"total interest ₹{avalanche['total_interest']:,.0f}, order: {avalanche['payoff_order']}\n"
             f"Snowball plan (smallest balance first): payoff in {snowball['months_to_payoff']} months, "
-            f"total interest ${snowball['total_interest']:,.0f}, order: {snowball['payoff_order']}\n"
-            f"Extra monthly payment allocated by the roadmap: ${extra_debt_payment:,.0f}"
+            f"total interest ₹{snowball['total_interest']:,.0f}, order: {snowball['payoff_order']}\n"
+            f"Extra monthly payment allocated by the roadmap: ₹{extra_debt_payment:,.0f}"
         )
         structured = {
             # Copied directly from the roadmap's allocation - never computed here.
             "allocated_amount": extra_debt_payment,
             "why_allocated": action_id,
-            "expected_effect": f"Avalanche saves ${interest_saved:,.0f} in interest versus snowball.",
+            "expected_effect": f"Avalanche saves ₹{interest_saved:,.0f} in interest versus snowball.",
             "tradeoffs": "Snowball may offer faster small-balance wins for motivation, at a higher total interest cost.",
             "what_to_monitor": "Confirm the extra payment is applied to principal, not just the next due date.",
             "finding_refs": finding_refs or [],
@@ -65,13 +65,13 @@ class DebtAnalyzerAgent(BaseAgent):
         savings = snowball["total_interest"] - avalanche["total_interest"]
         return (
             "**Debt Payoff Analysis (offline rule-based mode)**\n"
-            f"- Extra monthly payment allocated by the roadmap: ${allocated:,.0f}.\n"
+            f"- Extra monthly payment allocated by the roadmap: ₹{allocated:,.0f}.\n"
             f"- Avalanche (highest APR first): debt-free in {avalanche['months_to_payoff']} months, "
-            f"${avalanche['total_interest']:,.0f} in interest.\n"
+            f"₹{avalanche['total_interest']:,.0f} in interest.\n"
             f"- Snowball (smallest balance first): debt-free in {snowball['months_to_payoff']} months, "
-            f"${snowball['total_interest']:,.0f} in interest.\n"
+            f"₹{snowball['total_interest']:,.0f} in interest.\n"
             + (
-                f"- Avalanche saves you ${savings:,.0f} in interest -- recommended if you can stay "
+                f"- Avalanche saves you ₹{savings:,.0f} in interest -- recommended if you can stay "
                 "motivated without quick wins.\n"
                 if savings > 0
                 else "- Both strategies cost about the same in interest here.\n"

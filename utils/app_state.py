@@ -24,7 +24,9 @@ _DEFAULTS = {
     "raw_transactions": lambda: None,
     "categorized_df": lambda: None,
     "monthly_income": lambda: None,
+    "confirmed_monthly_expenses": lambda: None,
     "current_savings": lambda: None,
+    "current_investments": lambda: None,
     "debts": list,
     "goals": list,
     "constraints": lambda: {"minimum_monthly_buffer": 0.0, "protected_categories": []},
@@ -93,7 +95,9 @@ def set_categorized_df(df) -> None:
 def get_profile_fields() -> dict:
     return {
         "monthly_income": st.session_state["monthly_income"],
+        "confirmed_monthly_expenses": st.session_state["confirmed_monthly_expenses"],
         "current_savings": st.session_state["current_savings"],
+        "current_investments": st.session_state["current_investments"],
         "debts": st.session_state["debts"],
         "goals": st.session_state["goals"],
         "constraints": st.session_state["constraints"],
@@ -103,6 +107,7 @@ def get_profile_fields() -> dict:
 
 def set_profile_fields(
     monthly_income, current_savings, debts, goals, constraints, assumptions,
+    confirmed_monthly_expenses=None, current_investments=None,
 ) -> None:
     """`app.py` calls this on every rerun (Streamlit reruns the whole script
     on any widget interaction, not just when a profile field's widget itself
@@ -111,11 +116,14 @@ def set_profile_fields(
     sending a chat message). Only invalidate when a value genuinely changed
     from what is already stored."""
     changed = get_profile_fields() != {
-        "monthly_income": monthly_income, "current_savings": current_savings, "debts": debts,
-        "goals": goals, "constraints": constraints, "assumptions": assumptions,
+        "monthly_income": monthly_income, "confirmed_monthly_expenses": confirmed_monthly_expenses,
+        "current_savings": current_savings, "current_investments": current_investments,
+        "debts": debts, "goals": goals, "constraints": constraints, "assumptions": assumptions,
     }
     st.session_state["monthly_income"] = monthly_income
+    st.session_state["confirmed_monthly_expenses"] = confirmed_monthly_expenses
     st.session_state["current_savings"] = current_savings
+    st.session_state["current_investments"] = current_investments
     st.session_state["debts"] = debts
     st.session_state["goals"] = goals
     st.session_state["constraints"] = constraints

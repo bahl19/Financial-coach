@@ -163,11 +163,11 @@ def test_check4_catches_a_positive_amount_reported_against_a_zero_allocation():
     assert roadmap["allocation"]["debt_extra_payment"] == 0.0  # sanity-check the premise
 
     specialist_results["debt_result"] = dict(specialist_results["debt_result"])
-    specialist_results["debt_result"]["allocated_amount"] = 250.0  # fabricated, roadmap gave $0
+    specialist_results["debt_result"]["allocated_amount"] = 250.0  # fabricated, roadmap gave ₹0
 
     result = v.validate_consistency(roadmap, specialist_results, snapshot, findings, risks, trends)
     assert result["valid"] is False
-    assert any("though the roadmap allocated $0" in msg for msg in result["violations"])
+    assert any("though the roadmap allocated ₹0" in msg for msg in result["violations"])
 
 
 def test_check4_catches_recommending_a_zero_dollar_action():
@@ -183,7 +183,7 @@ def test_check4_catches_recommending_a_zero_dollar_action():
 
     result = v.validate_consistency(roadmap, specialist_results, snapshot, findings, risks, trends)
     assert result["valid"] is False
-    assert any("allocated $0" in msg for msg in result["violations"])
+    assert any("allocated ₹0" in msg for msg in result["violations"])
 
 
 # --------------------------------------------------------------------------
@@ -263,7 +263,7 @@ def test_check6_catches_an_action_exceeding_allocatable_surplus():
 def test_check7_catches_a_fabricated_dollar_amount_in_prose():
     roadmap, specialist_results, snapshot, findings, risks, trends = _clean()
     specialist_results["debt_result"] = dict(specialist_results["debt_result"])
-    specialist_results["debt_result"]["narrative"] = "You should pay an extra $987,654 toward your debt this month."
+    specialist_results["debt_result"]["narrative"] = "You should pay an extra ₹987,654 toward your debt this month."
 
     result = v.validate_consistency(roadmap, specialist_results, snapshot, findings, risks, trends)
     assert result["valid"] is False
@@ -301,7 +301,7 @@ def test_check8_catches_a_fabricated_percentage_in_prose():
 def test_check9_catches_a_fabricated_income_figure_in_prose():
     roadmap, specialist_results, snapshot, findings, risks, trends = _clean()
     specialist_results["savings_result"] = dict(specialist_results["savings_result"])
-    specialist_results["savings_result"]["narrative"] = "Given your income of $123,456, you should save more."
+    specialist_results["savings_result"]["narrative"] = "Given your income of ₹123,456, you should save more."
 
     result = v.validate_consistency(roadmap, specialist_results, snapshot, findings, risks, trends)
     assert result["valid"] is False

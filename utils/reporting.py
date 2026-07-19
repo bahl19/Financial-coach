@@ -142,14 +142,14 @@ def assemble_report_content(
 def _format_debts(debts: list) -> str:
     if not debts:
         return "_No debts on file._"
-    return "\n".join(f"- **{d['name']}**: ${d['balance']:,.2f} at {d['apr']}% APR" for d in debts)
+    return "\n".join(f"- **{d['name']}**: ₹{d['balance']:,.2f} at {d['apr']}% APR" for d in debts)
 
 
 def _format_goals(goals: list) -> str:
     if not goals:
         return "_No goals on file._"
     return "\n".join(
-        f"- **{g['name']}**: ${g['amount']:,.2f} in {g['months']} months (${g.get('current', 0):,.2f} saved so far)"
+        f"- **{g['name']}**: ₹{g['amount']:,.2f} in {g['months']} months (₹{g.get('current', 0):,.2f} saved so far)"
         for g in goals
     )
 
@@ -180,6 +180,7 @@ _HEALTH_METRIC_LABELS = (
     ("debt_to_income_percent", "Debt-to-income (%)"),
     ("emergency_fund_months", "Emergency fund (months)"),
     ("total_debt", "Total debt"),
+    ("net_worth", "Net worth"),
 )
 
 
@@ -218,18 +219,19 @@ def _format_roadmap(allocation: dict, actions: list) -> str:
     # gets its own labeled line, set apart from the distributed-amount list,
     # rather than being folded into that list or any total below it.
     lines = [
-        f"**Buffer reserved (planning constraint, not a distributed transfer):** ${allocation['buffer_reserved']:,.2f}",
+        f"**Buffer reserved (planning constraint, not a distributed transfer):** ₹{allocation['buffer_reserved']:,.2f}",
         "",
         "**Distributed monthly allocation:**",
-        f"- Extra debt payment: ${allocation['debt_extra_payment']:,.2f}",
-        f"- Savings contribution: ${allocation['savings_contribution']:,.2f}",
+        f"- Extra debt payment: ₹{allocation['debt_extra_payment']:,.2f}",
+        f"- Savings contribution: ₹{allocation['savings_contribution']:,.2f}",
+        f"- Investment contribution: ₹{allocation['investment_contribution']:,.2f}",
     ]
     for goal_name, amount in allocation["goal_contributions"].items():
-        lines.append(f"- Goal contribution ({goal_name}): ${amount:,.2f}")
+        lines.append(f"- Goal contribution ({goal_name}): ₹{amount:,.2f}")
     lines.append("")
     lines.append("**Actions, in priority order:**")
     for action in sorted(actions, key=lambda a: a["priority"]):
-        lines.append(f"{action['priority']}. **{action['title']}** ({action['timeframe']}): ${action['monthly_amount']:,.2f}/mo")
+        lines.append(f"{action['priority']}. **{action['title']}** ({action['timeframe']}): ₹{action['monthly_amount']:,.2f}/mo")
     return "\n".join(lines)
 
 
@@ -335,6 +337,7 @@ def build_tracker(roadmap: Roadmap, months: int = _DEFAULT_TRACKER_MONTHS) -> Li
         {
             "month": f"Month {i}",
             "planned_savings": allocation["savings_contribution"],
+            "planned_investment": allocation["investment_contribution"],
             "extra_debt_payment": allocation["debt_extra_payment"],
             "goal_contributions": total_goal_contributions,
         }

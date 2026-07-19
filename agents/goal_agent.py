@@ -24,7 +24,7 @@ class GoalPlannerAgent(BaseAgent):
             name = goal["name"]
             # The allocated contribution comes from roadmap.allocation.goal_contributions,
             # never recomputed from the raw monthly_surplus (that was the bug this
-            # phase exists to fix) - a goal missing from the dict simply got $0.
+            # phase exists to fix) - a goal missing from the dict simply got ₹0.
             contribution = goal_contributions.get(name, 0.0)
             results.append(super().run(
                 goal=goal,
@@ -37,9 +37,9 @@ class GoalPlannerAgent(BaseAgent):
     def _build_summary(self, goal, contribution, action_id=None, finding_refs=None) -> tuple:
         result = fc.goal_feasibility(goal["amount"], goal["months"], contribution, goal.get("current", 0.0))
         summary = (
-            f"Goal: {goal['name']}, target ${goal['amount']:,.0f} in {goal['months']} months, "
-            f"already saved ${goal.get('current', 0.0):,.0f}, allocated monthly contribution: "
-            f"${contribution:,.0f}. Required monthly contribution: ${result['required_monthly']:,.0f}. "
+            f"Goal: {goal['name']}, target ₹{goal['amount']:,.0f} in {goal['months']} months, "
+            f"already saved ₹{goal.get('current', 0.0):,.0f}, allocated monthly contribution: "
+            f"₹{contribution:,.0f}. Required monthly contribution: ₹{result['required_monthly']:,.0f}. "
             f"Feasible at this contribution: {result['feasible']}."
         )
         structured = {
@@ -47,7 +47,7 @@ class GoalPlannerAgent(BaseAgent):
             "why_allocated": action_id,
             "expected_effect": (
                 f"On track for {goal['name']}." if result["feasible"]
-                else f"Shortfall of ${result['shortfall']:,.0f}/month for {goal['name']}."
+                else f"Shortfall of ₹{result['shortfall']:,.0f}/month for {goal['name']}."
             ),
             "what_to_monitor": "Whether the required monthly contribution changes if the target or timeline changes.",
             "finding_refs": finding_refs or [],
@@ -62,11 +62,11 @@ class GoalPlannerAgent(BaseAgent):
         contribution = structured["allocated_amount"] or 0.0
         if result["feasible"]:
             return (
-                f"✅ On track: the roadmap allocates ${contribution:,.0f}/month, meeting the "
-                f"${result['required_monthly']:,.0f}/month needed for **{goal['name']}** in {goal['months']} months."
+                f"✅ On track: the roadmap allocates ₹{contribution:,.0f}/month, meeting the "
+                f"₹{result['required_monthly']:,.0f}/month needed for **{goal['name']}** in {goal['months']} months."
             )
         return (
-            f"⚠️ **{goal['name']}** needs ${result['required_monthly']:,.0f}/month but the roadmap "
-            f"allocates only ${contribution:,.0f} -- shortfall of ${result['shortfall']:,.0f}/month. "
+            f"⚠️ **{goal['name']}** needs ₹{result['required_monthly']:,.0f}/month but the roadmap "
+            f"allocates only ₹{contribution:,.0f} -- shortfall of ₹{result['shortfall']:,.0f}/month. "
             "Consider extending the timeline or cutting spending elsewhere."
         )

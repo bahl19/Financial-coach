@@ -73,6 +73,7 @@
     "goal_contributions": {
       "New laptop": 377.166667
     },
+    "investment_contribution": 0.0,
     "savings_contribution": 377.166667
   },
   "snapshot_metrics": {
@@ -83,6 +84,7 @@
     "gross_surplus": 904.333333,
     "is_partial_period": true,
     "monthly_surplus": 904.333333,
+    "net_worth": 3200.0,
     "period": "2026-05",
     "required_commitments": 0.0,
     "savings_rate_percent": 26.598039,

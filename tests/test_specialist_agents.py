@@ -118,6 +118,61 @@ def test_savings_agent_allocated_amount_exactly_matches_what_it_was_given():
     assert f"{given_amount:,.0f}" in result["narrative"]
 
 
+# --------------------------------------------------------------------------
+# Bug found while adding investment tracking: savings_projection() was
+# always called without `apr`, silently defaulting to 4% and ignoring
+# whatever savings_apy the user actually confirmed.
+# --------------------------------------------------------------------------
+
+def test_savings_agent_uses_the_confirmed_apy_not_a_hardcoded_default():
+    monthly = fc.monthly_cashflow(SAMPLE_TRANSACTIONS)
+    result_low_apy = SavingsStrategyAgent().run(
+        monthly_cashflow=monthly, current_savings=1000.0, savings_contribution=500.0, savings_apy=0.01,
+    )
+    result_high_apy = SavingsStrategyAgent().run(
+        monthly_cashflow=monthly, current_savings=1000.0, savings_contribution=500.0, savings_apy=0.10,
+    )
+    low_projection = result_low_apy["supporting_tables"]["projection"]
+    high_projection = result_high_apy["supporting_tables"]["projection"]
+    assert high_projection[-1]["balance"] > low_projection[-1]["balance"]
+    assert "1.0%" in result_low_apy["narrative"]
+    assert "10.0%" in result_high_apy["narrative"]
+
+
+def test_savings_agent_narrates_investment_contribution_when_present():
+    monthly = fc.monthly_cashflow(SAMPLE_TRANSACTIONS)
+    result = SavingsStrategyAgent().run(
+        monthly_cashflow=monthly, current_savings=1000.0, savings_contribution=0.0, savings_apy=0.04,
+        investment_contribution=750.0, current_investments=20_000.0, investment_cagr=0.12,
+        action_id="ACTION_GROW_INVESTMENT",
+    )
+    assert result["allocated_amount"] == 750.0  # savings_contribution(0) + investment_contribution(750)
+    assert "750" in result["narrative"]
+    assert "12.0%" in result["narrative"]
+    assert result["supporting_tables"]["investment_projection"] is not None
+
+
+def test_savings_agent_omits_investment_projection_when_investment_contribution_is_zero():
+    monthly = fc.monthly_cashflow(SAMPLE_TRANSACTIONS)
+    result = SavingsStrategyAgent().run(
+        monthly_cashflow=monthly, current_savings=1000.0, savings_contribution=500.0,
+    )
+    assert result["supporting_tables"]["investment_projection"] is None
+    assert "CAGR" not in result["narrative"]
+
+
+def test_savings_agent_fallback_narrative_reports_investment_when_present():
+    monthly = fc.monthly_cashflow(SAMPLE_TRANSACTIONS)
+    agent = SavingsStrategyAgent()
+    result = agent.run(
+        monthly_cashflow=monthly, current_savings=1000.0, savings_contribution=200.0,
+        investment_contribution=300.0, current_investments=10_000.0, investment_cagr=0.10,
+    )
+    fallback = agent._fallback_narrative(result)
+    assert "investment" in fallback.lower()
+    assert "300" in fallback
+
+
 def test_goal_agent_allocated_amount_exactly_matches_what_it_was_given():
     goals = [{"name": "Car", "amount": 5000.0, "months": 10, "current": 0.0, "priority": "medium"}]
     given_amount = 288.19

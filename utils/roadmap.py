@@ -56,12 +56,22 @@ _STARTER_BUFFER_SHARE_OF_SURPLUS = 0.5
 _DEBT_ACCEL_SHARE_OF_SURPLUS = 0.5
 _HIGH_APR_THRESHOLD_PERCENT = 20.0  # a debt at or above this rate is "high-interest" for step 4
 
+# Step 6 (remainder routing): the remaining ledger balance goes to investment
+# contribution instead of plain savings only when the user's reported
+# investment_cagr beats their savings_apy by at least this many percentage
+# points - a deliberate margin, not a bare ">" comparison, so a trivial or
+# noisy rate difference doesn't flip the recommendation. Absent investment
+# data (current_investments or investment_cagr is None) always keeps
+# today's behavior: 100% of the remainder goes to savings.
+_CAGR_ADVANTAGE_THRESHOLD_PERCENT = 1.0
+
 _PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 
 ACTION_RESOLVE_INPUTS = "ACTION_RESOLVE_INPUTS"
 ACTION_STARTER_BUFFER = "ACTION_STARTER_BUFFER"
 ACTION_ACCELERATE_DEBT = "ACTION_ACCELERATE_DEBT"
 ACTION_GROW_SAVINGS = "ACTION_GROW_SAVINGS"
+ACTION_GROW_INVESTMENT = "ACTION_GROW_INVESTMENT"
 
 
 def _slug(name: str) -> str:
@@ -101,7 +111,10 @@ def _unresolved_inputs_roadmap(
     return {
         "schema_version": "1.0",
         "actions": [action],
-        "allocation": {"buffer_reserved": 0.0, "debt_extra_payment": 0.0, "goal_contributions": {}, "savings_contribution": 0.0},
+        "allocation": {
+            "buffer_reserved": 0.0, "debt_extra_payment": 0.0, "goal_contributions": {},
+            "savings_contribution": 0.0, "investment_contribution": 0.0,
+        },
         "narrative": f"No monetary allocation is possible yet: {reason}",
         "assumptions_used": profile.get("assumptions"),
     }
@@ -193,24 +206,47 @@ def build_roadmap(
             "This month" if underfunded else "Next 90 days",
             f"Fund goal: {goal['name']}",
             (
-                f"Contributing ${amount:,.0f}/month toward {goal['name']}, short of the "
-                f"${feasibility['required_monthly']:,.0f}/month required to stay on track."
+                f"Contributing ₹{amount:,.0f}/month toward {goal['name']}, short of the "
+                f"₹{feasibility['required_monthly']:,.0f}/month required to stay on track."
             ) if underfunded else f"Contributing toward {goal['name']} at the required monthly pace.",
             amount, ["allocatable_surplus"], [], _risk_ids_of_category(risks, "goals"),
         ))
 
-    # Step 6: remainder to savings. Combined with the starter-buffer
-    # contribution above into one aggregate allocation.savings_contribution,
-    # since the frozen Roadmap.allocation contract has one savings key, not
-    # a separate one per savings-directed action.
-    remainder_to_savings = ledger.take(ledger.remaining)
-    if remainder_to_savings > 0:
+    # Step 6: remainder to savings, or to investment contribution instead
+    # when the user's reported investment_cagr clears savings_apy by
+    # _CAGR_ADVANTAGE_THRESHOLD_PERCENT. The starter emergency buffer above
+    # is never a candidate for this - an emergency fund needs to be liquid
+    # and stable, not routed toward a return that can also fall; only
+    # genuinely discretionary remainder surplus is eligible.
+    assumptions = profile.get("assumptions") or {}
+    savings_apy = assumptions.get("savings_apy") or 0.0
+    investment_cagr = assumptions.get("investment_cagr")
+    current_investments = profile.get("current_investments")
+    prefers_investment = (
+        current_investments is not None and investment_cagr is not None
+        and (investment_cagr - savings_apy) * 100 >= _CAGR_ADVANTAGE_THRESHOLD_PERCENT
+    )
+
+    remainder = ledger.take(ledger.remaining)
+    remainder_to_savings = 0.0 if prefers_investment else remainder
+    remainder_to_investment = remainder if prefers_investment else 0.0
+
+    if remainder_to_investment > 0:
+        actions.append(_action(
+            ACTION_GROW_INVESTMENT, 0, "positive", "long_term", "Ongoing",
+            "Grow investments",
+            f"Remaining surplus routed to investment contribution - your reported "
+            f"{investment_cagr * 100:.1f}% CAGR beats your {savings_apy * 100:.1f}% savings APY.",
+            remainder_to_investment, ["gross_surplus"], [], [],
+        ))
+    elif remainder_to_savings > 0:
         actions.append(_action(
             ACTION_GROW_SAVINGS, 0, "positive", "long_term", "Ongoing",
             "Grow savings", "Remaining surplus after higher-priority steps.",
             remainder_to_savings, ["gross_surplus"], [], [],
         ))
     savings_contribution = starter_buffer_amount + remainder_to_savings
+    investment_contribution = remainder_to_investment
 
     for index, action in enumerate(actions, start=1):
         action["priority"] = index
@@ -223,6 +259,7 @@ def build_roadmap(
             "debt_extra_payment": debt_extra_payment,
             "goal_contributions": goal_contributions,
             "savings_contribution": savings_contribution,
+            "investment_contribution": investment_contribution,
         },
         "narrative": "",
         "assumptions_used": profile.get("assumptions"),
@@ -250,7 +287,7 @@ def _fallback_roadmap_narrative(roadmap: Roadmap) -> str:
     for action in roadmap["actions"]:
         lines.append(
             f"{action['priority']}. **{action['title']}** ({action['timeframe']}): "
-            f"${action['monthly_amount']:,.0f}/mo — {action['rationale']}"
+            f"₹{action['monthly_amount']:,.0f}/mo — {action['rationale']}"
         )
     return "\n".join(lines)
 
@@ -260,7 +297,7 @@ def explain_roadmap(roadmap: Roadmap, snapshot: FinancialSnapshot) -> str:
         return _fallback_roadmap_narrative(roadmap)
 
     summary_lines = [
-        f"{a['priority']}. {a['title']} - ${a['monthly_amount']:,.0f}/mo ({a['timeframe']}): {a['rationale']}"
+        f"{a['priority']}. {a['title']} - ₹{a['monthly_amount']:,.0f}/mo ({a['timeframe']}): {a['rationale']}"
         for a in roadmap["actions"]
     ]
     summary = "Action plan:\n" + "\n".join(summary_lines)

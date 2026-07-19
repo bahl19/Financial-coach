@@ -1,7 +1,10 @@
 """Phase 3 tests: utils/scenarios.py."""
 
+import copy
 import json
 from pathlib import Path
+
+import pytest
 
 from utils import finance_calc as fc
 from utils import scenarios
@@ -101,3 +104,43 @@ def test_compare_scenarios_handles_a_none_metric_without_crashing():
 
     comparison = scenarios.compare_scenarios(snapshot, snapshot)
     assert comparison["debt_to_income_percent"]["delta"] is None
+
+
+# --------------------------------------------------------------------------
+# apply_expense_reduction(): Scenario Comparison's "cut discretionary
+# spending by X%" template. Which categories count as discretionary is the
+# caller's decision (scenarios.py depends on Component 1/contracts only).
+# --------------------------------------------------------------------------
+
+def test_apply_expense_reduction_scales_down_only_the_named_categories():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    dining_before = sum(
+        t["amount"] for t in profile["transactions"] if t["category"] == "Dining Out"
+    )
+    adjusted = scenarios.apply_expense_reduction(profile, {"Dining Out"}, reduction_fraction=0.5)
+    dining_after = sum(
+        t["amount"] for t in adjusted["transactions"] if t["category"] == "Dining Out"
+    )
+    other_before = sum(t["amount"] for t in profile["transactions"] if t["category"] != "Dining Out")
+    other_after = sum(t["amount"] for t in adjusted["transactions"] if t["category"] != "Dining Out")
+
+    assert dining_after == pytest.approx(dining_before * 0.5)
+    assert other_after == pytest.approx(other_before)  # untouched categories unaffected
+
+
+def test_apply_expense_reduction_does_not_mutate_the_base_profile():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    original = copy.deepcopy(profile)
+    scenarios.apply_expense_reduction(profile, {"Dining Out"}, reduction_fraction=0.2)
+    assert profile == original
+
+
+def test_apply_expense_reduction_never_touches_income_even_if_named():
+    """A defensive guard, not an expected real input: even if a caller
+    mistakenly names "Income" as a category to reduce, only negative
+    (expense) transactions are ever scaled - income is never touched."""
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    income_before = sum(t["amount"] for t in profile["transactions"] if t["category"] == "Income")
+    adjusted = scenarios.apply_expense_reduction(profile, {"Income"}, reduction_fraction=0.5)
+    income_after = sum(t["amount"] for t in adjusted["transactions"] if t["category"] == "Income")
+    assert income_after == income_before

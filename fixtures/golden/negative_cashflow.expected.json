@@ -81,6 +81,7 @@
     "buffer_reserved": 100.0,
     "debt_extra_payment": 0.0,
     "goal_contributions": {},
+    "investment_contribution": 0.0,
     "savings_contribution": 0.0
   },
   "snapshot_metrics": {
@@ -91,6 +92,7 @@
     "gross_surplus": -546.666667,
     "is_partial_period": true,
     "monthly_surplus": -546.666667,
+    "net_worth": -4700.0,
     "period": "2026-05",
     "required_commitments": 0.0,
     "savings_rate_percent": -21.025641,

@@ -117,6 +117,38 @@ def goal_feasibility(amount: float, months: int, surplus: float, current: float 
     return {"required_monthly": required_monthly, "feasible": feasible, "shortfall": shortfall}
 
 
+def required_monthly_contribution_with_growth(
+    target_amount: float, months: int, current: float, annual_rate: float,
+) -> float:
+    """Required monthly contribution to reach `target_amount` in `months`
+    months, given `current` already saved and monthly compounding at
+    `annual_rate` (e.g. 0.065 for 6.5%) - the future-value-of-an-ordinary-
+    annuity formula, solved for payment. This is `goal_feasibility()`'s
+    simple linear division generalized for a rate-aware comparison (Scenario
+    Comparison's FD/PPF/SIP template): `goal_feasibility()` itself is left
+    untouched since every already-frozen golden fixture depends on its exact
+    (rate-free) arithmetic.
+
+    Falls back to the same linear division goal_feasibility() uses when
+    `months <= 0` (nothing to solve for) or `annual_rate` is `None`/`<= 0`
+    (no growth - a monthly rate of 0 makes the annuity formula's `/r`
+    division undefined, and linear division is the exact right answer at a
+    literal 0% rate anyway)."""
+    remaining = max(target_amount - current, 0.0)
+    if months <= 0:
+        return remaining
+    if not annual_rate or annual_rate <= 0:
+        return remaining / months
+
+    monthly_rate = annual_rate / 12
+    growth_factor = (1 + monthly_rate) ** months
+    future_value_of_current = current * growth_factor
+    if future_value_of_current >= target_amount:
+        return 0.0
+    annuity_factor = (growth_factor - 1) / monthly_rate
+    return (target_amount - future_value_of_current) / annuity_factor
+
+
 def simulate_payoff(debts: list, extra_monthly: float, strategy: str = "avalanche") -> dict:
     """Simulate month-by-month payoff. strategy: 'avalanche' (highest APR first)
     or 'snowball' (smallest balance first). Freed-up minimum payments from paid-off
@@ -388,7 +420,15 @@ def calculate_financial_snapshot(
 ) -> FinancialSnapshot:
     transactions_df = _transactions_to_frame(profile.get("transactions") or [])
 
-    average_monthly_expenses = _average_monthly_expenses(transactions_df)
+    # A user-confirmed monthly expense figure overrides the transaction-
+    # derived average everywhere below it - same "confirmed value wins"
+    # precedent as monthly_income. None (never confirmed) keeps today's
+    # behavior: the derived average is used, unchanged.
+    confirmed_monthly_expenses = profile.get("confirmed_monthly_expenses")
+    average_monthly_expenses = (
+        confirmed_monthly_expenses if confirmed_monthly_expenses is not None
+        else _average_monthly_expenses(transactions_df)
+    )
     monthly_income = profile.get("monthly_income")
     gross_surplus = calculate_gross_surplus(monthly_income, average_monthly_expenses)
 
@@ -412,6 +452,16 @@ def calculate_financial_snapshot(
         emergency_fund_months = current_savings / average_monthly_expenses
 
     total_debt = sum(float(debt.get("balance") or 0.0) for debt in debts)
+
+    # current_investments absent is a real, common "no investments" fact
+    # (like current_savings' own None/0 distinction) - it contributes 0 to
+    # net worth rather than making the whole figure unknown. current_savings
+    # itself being unknown is the one case net_worth truly cannot answer.
+    current_investments = profile.get("current_investments")
+    net_worth = (
+        current_savings + (current_investments or 0.0) - total_debt
+        if current_savings is not None else None
+    )
 
     # Baseline (minimums-only) payoff comparison. This is a diagnostic view at
     # the snapshot stage, not an allocation decision - Component 4's
@@ -455,6 +505,7 @@ def calculate_financial_snapshot(
         "total_debt": total_debt,
         "period": _period_label(transactions_df),
         "is_partial_period": _is_partial_trailing_period(transactions_df),
+        "net_worth": net_worth,
     }
 
     health_score, health_band = calculate_health_score(metrics, profile.get("assumptions") or {})
@@ -855,7 +906,7 @@ def _goal_feasibility_findings(snapshot: dict, trends: List[Trend]) -> List[Find
         findings.append(_finding(
             f"FINDING_GOAL_SHORTFALL_{slug}", "goal_feasibility", f"{goal.get('name')} is not currently feasible",
             "medium", "next_90_days", 1.0, "fact", [], [],
-            f"Required monthly contribution exceeds available surplus by ${goal.get('shortfall', 0):.0f}.",
+            f"Required monthly contribution exceeds available surplus by ₹{goal.get('shortfall', 0):.0f}.",
             "Extend the timeline, reduce the target amount, or free up more surplus.",
         ))
     return findings

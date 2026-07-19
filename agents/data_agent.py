@@ -34,7 +34,7 @@ class DataIngestionAgent:
 
         rows = []
         line_re = re.compile(
-            r"(?P<date>\d{1,2}/\d{1,2}/\d{2,4})\s+(?P<desc>.+?)\s+(?P<amount>-?\$?\d[\d,]*\.\d{2})$"
+            r"(?P<date>\d{1,2}/\d{1,2}/\d{2,4})\s+(?P<desc>.+?)\s+(?P<amount>-?(?:\$|₹|Rs\.?\s?)?\d[\d,]*\.\d{2})$"
         )
         with pdfplumber.open(file) as pdf:
             for page in pdf.pages:
@@ -42,7 +42,7 @@ class DataIngestionAgent:
                 for line in text.splitlines():
                     m = line_re.match(line.strip())
                     if m:
-                        amt = float(m.group("amount").replace("$", "").replace(",", ""))
+                        amt = float(m.group("amount").replace("$", "").replace("₹", "").replace("Rs.", "").replace("Rs", "").replace(",", ""))
                         rows.append({
                             "date": m.group("date"),
                             "description": m.group("desc").strip(),

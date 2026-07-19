@@ -1,96 +1,75 @@
 date,description,amount
-2026-05-01,Rent Payment - Meridian Apartments,-1650.00
-2026-05-01,Payroll Direct Deposit,3100.00
-2026-05-02,Whole Foods Market,-84.32
-2026-05-02,Shell Gas Station,-42.10
-2026-05-03,Starbucks Coffee,-6.75
-2026-05-04,Netflix Subscription,-15.99
-2026-05-04,Spotify Premium,-11.99
-2026-05-05,Chipotle Mexican Grill,-13.40
-2026-05-05,Amazon.com,-58.22
-2026-05-06,Uber Trip,-18.50
-2026-05-07,CVS Pharmacy,-22.15
-2026-05-08,Trader Joe's,-63.10
-2026-05-09,AT&T Internet,-60.00
-2026-05-09,Comcast Electric Co,-88.40
-2026-05-10,Geico Insurance,-145.00
-2026-05-11,Credit Card Payment,-150.00
-2026-05-11,Student Loan Payment,-210.00
-2026-05-12,Auto Loan Payment,-260.00
-2026-05-12,Transfer to Savings,-200.00
-2026-05-13,Planet Fitness,-29.99
-2026-05-14,Target,-72.45
-2026-05-15,Payroll Direct Deposit,3100.00
-2026-05-15,DoorDash,-34.20
-2026-05-16,Safeway Grocery,-91.18
-2026-05-17,Shell Gas Station,-38.75
-2026-05-18,Chipotle Mexican Grill,-15.60
-2026-05-19,Starbucks Coffee,-5.95
-2026-05-20,Amazon.com,-41.30
-2026-05-21,Uber Trip,-22.10
-2026-05-22,Best Buy,-129.99
-2026-05-23,Whole Foods Market,-77.60
-2026-05-25,McDonald's,-9.80
-2026-05-27,Trader Joe's,-58.40
-2026-05-29,Payroll Direct Deposit,3100.00
-2026-05-30,Movie Tickets - AMC,-28.00
-2026-06-01,Rent Payment - Meridian Apartments,-1650.00
-2026-06-02,Whole Foods Market,-89.15
-2026-06-02,Shell Gas Station,-44.30
-2026-06-03,Starbucks Coffee,-7.10
-2026-06-04,Netflix Subscription,-15.99
-2026-06-04,Spotify Premium,-11.99
-2026-06-05,Chipotle Mexican Grill,-14.20
-2026-06-05,Amazon.com,-63.50
-2026-06-06,Uber Trip,-19.75
-2026-06-07,Walgreens Pharmacy,-18.60
-2026-06-08,Trader Joe's,-67.90
-2026-06-09,AT&T Internet,-60.00
-2026-06-09,Comcast Electric Co,-91.20
-2026-06-10,Geico Insurance,-145.00
-2026-06-11,Credit Card Payment,-150.00
-2026-06-11,Student Loan Payment,-210.00
-2026-06-12,Auto Loan Payment,-260.00
-2026-06-12,Payroll Direct Deposit,3100.00
-2026-06-12,Transfer to Savings,-200.00
-2026-06-13,Planet Fitness,-29.99
-2026-06-14,Target,-84.10
-2026-06-15,DoorDash,-38.90
-2026-06-16,Safeway Grocery,-95.40
-2026-06-17,Shell Gas Station,-41.60
-2026-06-18,Chipotle Mexican Grill,-16.80
-2026-06-19,Starbucks Coffee,-6.40
-2026-06-20,Amazon.com,-47.85
-2026-06-21,Uber Trip,-25.30
-2026-06-22,Best Buy,-64.99
-2026-06-23,Whole Foods Market,-82.20
-2026-06-25,McDonald's,-11.20
-2026-06-26,Payroll Direct Deposit,3100.00
-2026-06-27,Trader Joe's,-61.75
-2026-06-29,Concert Tickets,-95.00
-2026-07-01,Rent Payment - Meridian Apartments,-1650.00
-2026-07-02,Whole Foods Market,-93.40
-2026-07-02,Shell Gas Station,-47.90
-2026-07-03,Starbucks Coffee,-8.20
-2026-07-04,Netflix Subscription,-15.99
-2026-07-04,Spotify Premium,-11.99
-2026-07-05,Chipotle Mexican Grill,-19.60
-2026-07-05,Amazon.com,-88.40
-2026-07-06,Uber Trip,-31.20
-2026-07-06,DoorDash,-42.50
-2026-07-07,CVS Pharmacy,-27.30
-2026-07-08,Trader Joe's,-72.10
-2026-07-09,AT&T Internet,-60.00
-2026-07-09,Comcast Electric Co,-94.60
-2026-07-10,Geico Insurance,-145.00
-2026-07-10,Payroll Direct Deposit,3100.00
-2026-07-10,Credit Card Payment,-150.00
-2026-07-10,Student Loan Payment,-210.00
-2026-07-11,Auto Loan Payment,-260.00
-2026-07-11,Transfer to Savings,-200.00
-2026-07-12,Planet Fitness,-29.99
-2026-07-12,DoorDash,-45.80
-2026-07-13,Rooftop Restaurant,-68.20
-2026-07-14,Target,-95.60
-2026-07-15,Uber Trip,-28.40
-2026-07-15,Amazon.com,-102.30
+2026-05-01,Salary Credit - Neatwork Software Pvt Ltd,75000.00
+2026-05-02,House Rent - Landlord Ramesh Kumar,-18000.00
+2026-05-03,BigBasket Grocery Order,-2450.00
+2026-05-04,DMart Supermarket,-1780.00
+2026-05-05,BESCOM Electricity Bill,-1950.00
+2026-05-06,Jio Fiber Broadband,-799.00
+2026-05-07,Airtel Postpaid Recharge,-499.00
+2026-05-08,Swiggy Order,-420.00
+2026-05-09,Zomato Order,-560.00
+2026-05-10,Ola Cab Ride,-310.00
+2026-05-10,HPCL Petrol Pump,-2200.00
+2026-05-11,Netflix Subscription,-499.00
+2026-05-11,Hotstar Subscription,-299.00
+2026-05-12,SIP - Zerodha Coin Mutual Fund,-6000.00
+2026-05-13,HDFC Credit Card Payment,-5500.00
+2026-05-13,Personal Loan EMI - HDFC Bank,-3200.00
+2026-05-14,Amazon.in Order,-1899.00
+2026-05-15,Apollo Pharmacy,-640.00
+2026-05-18,Myntra Order,-1450.00
+2026-05-19,Swiggy Order,-380.00
+2026-05-20,LIC Premium Payment,-2000.00
+2026-05-21,BigBasket Grocery Order,-1980.00
+2026-05-22,Ola Cab Ride,-270.00
+2026-05-24,PVR Cinemas,-650.00
+2026-05-25,Zomato Order,-510.00
+2026-05-27,Flipkart Order,-2299.00
+2026-05-28,1mg Pharmacy Order,-450.00
+2026-05-29,Cult.fit Membership,-999.00
+2026-06-01,Salary Credit - Neatwork Software Pvt Ltd,75000.00
+2026-06-02,House Rent - Landlord Ramesh Kumar,-18000.00
+2026-06-03,BigBasket Grocery Order,-2450.00
+2026-06-04,DMart Supermarket,-1780.00
+2026-06-05,BESCOM Electricity Bill,-1950.00
+2026-06-06,Jio Fiber Broadband,-799.00
+2026-06-07,Airtel Postpaid Recharge,-499.00
+2026-06-08,Swiggy Order,-420.00
+2026-06-09,Zomato Order,-560.00
+2026-06-10,Ola Cab Ride,-310.00
+2026-06-10,HPCL Petrol Pump,-2200.00
+2026-06-11,Netflix Subscription,-499.00
+2026-06-11,Hotstar Subscription,-299.00
+2026-06-12,SIP - Zerodha Coin Mutual Fund,-6000.00
+2026-06-13,HDFC Credit Card Payment,-5500.00
+2026-06-13,Personal Loan EMI - HDFC Bank,-3200.00
+2026-06-14,Amazon.in Order,-1899.00
+2026-06-15,Apollo Pharmacy,-640.00
+2026-06-18,Myntra Order,-1450.00
+2026-06-19,Swiggy Order,-380.00
+2026-06-20,LIC Premium Payment,-2000.00
+2026-06-21,BigBasket Grocery Order,-1980.00
+2026-06-22,Ola Cab Ride,-270.00
+2026-06-24,PVR Cinemas,-650.00
+2026-06-25,Zomato Order,-510.00
+2026-06-27,Flipkart Order,-2299.00
+2026-06-28,1mg Pharmacy Order,-450.00
+2026-06-29,Cult.fit Membership,-999.00
+2026-07-01,Salary Credit - Neatwork Software Pvt Ltd,75000.00
+2026-07-02,House Rent - Landlord Ramesh Kumar,-18000.00
+2026-07-03,BigBasket Grocery Order,-2450.00
+2026-07-04,DMart Supermarket,-1780.00
+2026-07-05,BESCOM Electricity Bill,-1950.00
+2026-07-06,Jio Fiber Broadband,-799.00
+2026-07-07,Airtel Postpaid Recharge,-499.00
+2026-07-08,Swiggy Order,-420.00
+2026-07-09,Zomato Order,-560.00
+2026-07-10,Ola Cab Ride,-310.00
+2026-07-10,HPCL Petrol Pump,-2200.00
+2026-07-11,Netflix Subscription,-499.00
+2026-07-11,Hotstar Subscription,-299.00
+2026-07-12,SIP - Zerodha Coin Mutual Fund,-6000.00
+2026-07-13,HDFC Credit Card Payment,-5500.00
+2026-07-13,Personal Loan EMI - HDFC Bank,-3200.00
+2026-07-14,Amazon.in Order,-1899.00
+2026-07-15,Apollo Pharmacy,-640.00

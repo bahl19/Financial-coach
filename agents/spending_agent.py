@@ -38,12 +38,12 @@ class SpendingAnalyzerAgent(BaseAgent):
         lines = ["**Spending Analysis (offline rule-based mode)**"]
         if not by_cat.empty:
             top = by_cat.iloc[0]
-            lines.append(f"- Your largest expense category is **{top['category']}** at ${top['amount']:,.0f}.")
+            lines.append(f"- Your largest expense category is **{top['category']}** at ₹{top['amount']:,.0f}.")
         if not monthly.empty:
             last = monthly.iloc[-1]
             lines.append(
-                f"- In {last['month']}, you earned ${last['income']:,.0f} and spent "
-                f"${last['expenses']:,.0f} (net ${last['net']:,.0f})."
+                f"- In {last['month']}, you earned ₹{last['income']:,.0f} and spent "
+                f"₹{last['expenses']:,.0f} (net ₹{last['net']:,.0f})."
             )
         if not trends.empty:
             risers = trends[trends["pct_change"] > 15]

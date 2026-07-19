@@ -18,12 +18,12 @@ from typing import List
 
 import pandas as pd
 
-_DOLLAR_PATTERN = re.compile(r"\$([\d,]+(?:\.\d+)?)")
+_DOLLAR_PATTERN = re.compile(r"₹([\d,]+(?:\.\d+)?)")  # matches ₹ (not $) - see Phase-11-era currency switch to INR
 _PERCENT_PATTERN = re.compile(r"(-?\d+(?:\.\d+)?)\s*%")
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 _INCOME_EXPENSE_SURPLUS_KEYWORDS = ("income", "expense", "surplus")
 
-# Narratives format money with `:,.0f` (whole dollars), so allow a small
+# Narratives format money with `:,.0f` (whole rupees), so allow a small
 # absolute tolerance to absorb that rounding rather than demanding an exact
 # floating-point match against an unrounded allocation value.
 _DOLLAR_TOLERANCE = 1.0
@@ -48,7 +48,7 @@ def _numeric_leaves(obj) -> List[float]:
     `supporting_tables` is its grounding data - whatever number it narrates
     should trace back to something in there, not just to the
     roadmap/snapshot-wide figures. Skips bool (a bool is technically an int
-    subclass in Python, but "True"/"False" are never a dollar or percent
+    subclass in Python, but "True"/"False" are never a currency or percent
     figure)."""
     values: List[float] = []
     if isinstance(obj, bool):
@@ -71,7 +71,10 @@ def _numeric_leaves(obj) -> List[float]:
 
 def _global_dollar_allowlist(roadmap: dict, snapshot: dict) -> List[float]:
     allocation = roadmap["allocation"]
-    values = [allocation["buffer_reserved"], allocation["debt_extra_payment"], allocation["savings_contribution"]]
+    values = [
+        allocation["buffer_reserved"], allocation["debt_extra_payment"],
+        allocation["savings_contribution"], allocation["investment_contribution"],
+    ]
     values.extend(allocation["goal_contributions"].values())
     values.extend(action["monthly_amount"] for action in roadmap["actions"])
     metrics = snapshot["metrics"]
@@ -103,7 +106,7 @@ def _entry_allowlist(entry: dict, global_allowlist: List[float]) -> List[float]:
     return global_allowlist + _numeric_leaves(entry["result"].get("supporting_tables"))
 
 
-# Check 7: every $ amount in a narrative appears in an allowlist derived
+# Check 7: every ₹ amount in a narrative appears in an allowlist derived
 # from roadmap.allocation + snapshot.metrics + that specialist's own
 # supporting_tables (its grounding data).
 def check_narrative_dollar_amounts_are_allowlisted(entries, roadmap, snapshot, **_) -> List[dict]:
@@ -114,10 +117,10 @@ def check_narrative_dollar_amounts_are_allowlisted(entries, roadmap, snapshot, *
         narrative = entry["result"].get("narrative") or ""
         for amount in _extract_dollar_amounts(narrative):
             # Compare against the magnitude: dollar amounts in narratives
-            # are always shown unsigned (e.g. "over by $645"), while some
+            # are always shown unsigned (e.g. "over by ₹645"), while some
             # grounding data (a variance/delta) is naturally signed.
             if not any(abs(amount - abs(allowed)) <= _DOLLAR_TOLERANCE for allowed in allowlist):
-                violations.append(_violation(entry, f"narrative quotes ${amount:,.0f}, matching no known allocation, metric, or supporting figure"))
+                violations.append(_violation(entry, f"narrative quotes ₹{amount:,.0f}, matching no known allocation, metric, or supporting figure"))
     return violations
 
 
@@ -163,7 +166,7 @@ def check_narrative_income_expense_surplus_values(entries, snapshot, **_) -> Lis
             for amount in _extract_dollar_amounts(sentence):
                 if not any(abs(amount - abs(allowed)) <= _DOLLAR_TOLERANCE for allowed in allowlist):
                     violations.append(_violation(
-                        entry, f"sentence mentioning income/expense/surplus quotes ${amount:,.0f}, absent from snapshot.metrics or supporting figures"
+                        entry, f"sentence mentioning income/expense/surplus quotes ₹{amount:,.0f}, absent from snapshot.metrics or supporting figures"
                     ))
     return violations
 

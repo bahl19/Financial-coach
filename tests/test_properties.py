@@ -66,18 +66,23 @@ def transactions_strategy(draw):
 
 @st.composite
 def profile_strategy(draw):
+    has_investments = draw(st.booleans())
+    assumptions = default_assumptions()
+    if has_investments:
+        assumptions = {**assumptions, "investment_cagr": draw(st.floats(min_value=0, max_value=0.3, allow_nan=False, allow_infinity=False))}
     return {
         "schema_version": "1.0",
         "transactions": draw(transactions_strategy()),
         "monthly_income": draw(st.floats(min_value=0, max_value=20_000, allow_nan=False, allow_infinity=False)),
         "current_savings": draw(_money),
+        "current_investments": draw(_money) if has_investments else None,
         "debts": draw(st.lists(debt_strategy, min_size=0, max_size=4)),
         "goals": draw(st.lists(goal_strategy, min_size=0, max_size=3)),
         "constraints": {
             "minimum_monthly_buffer": draw(st.floats(min_value=0, max_value=2_000, allow_nan=False, allow_infinity=False)),
             "protected_categories": [],
         },
-        "assumptions": default_assumptions(),
+        "assumptions": assumptions,
     }
 
 
@@ -100,7 +105,8 @@ def test_distributed_allocation_never_exceeds_allocatable_surplus(profile):
     allocatable = snapshot["metrics"]["allocatable_surplus"] or 0.0
     allocation = roadmap["allocation"]
     distributed = (
-        allocation["debt_extra_payment"] + allocation["savings_contribution"] + sum(allocation["goal_contributions"].values())
+        allocation["debt_extra_payment"] + allocation["savings_contribution"] + allocation["investment_contribution"]
+        + sum(allocation["goal_contributions"].values())
     )
     assert distributed <= allocatable + 1e-6
 
@@ -169,4 +175,5 @@ def test_non_positive_gross_surplus_implies_zero_distributed_allocation(profile)
     allocation = roadmap["allocation"]
     assert allocation["debt_extra_payment"] == 0.0
     assert allocation["savings_contribution"] == 0.0
+    assert allocation["investment_contribution"] == 0.0
     assert all(value == 0.0 for value in allocation["goal_contributions"].values())

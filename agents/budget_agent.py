@@ -7,7 +7,7 @@ class BudgetAdvisorAgent(BaseAgent):
     system_prompt = (
         "You are a pragmatic budget coach using the 50/30/20 framework (needs/wants/savings). "
         "Compare the user's actual spending split to the recommended split and give 3 specific, "
-        "actionable changes they could make this month. Reference real dollar amounts. Under 180 words."
+        "actionable changes they could make this month. Reference real rupee amounts. Under 180 words."
     )
 
     def _build_summary(self, by_category, monthly_cashflow, monthly_income) -> tuple:
@@ -19,12 +19,12 @@ class BudgetAdvisorAgent(BaseAgent):
         actual = fc.actual_budget_split_from_categories(by_category, num_months)
 
         summary = (
-            f"Monthly income: ${monthly_income:,.0f}\n"
+            f"Monthly income: ₹{monthly_income:,.0f}\n"
             f"Recommended 50/30/20 split: {recommended}\n"
             f"Actual split (average per month): {actual}"
         )
         # Computed once and stored, not recomputed inline while formatting
-        # the narrative - a derived figure ("over/under by $X") must be
+        # the narrative - a derived figure ("over/under by ₹X") must be
         # traceable in supporting_tables like everything else, not exist
         # only inside a string-formatting call (Standing Context: pure
         # functions, one truth per figure).
@@ -51,8 +51,8 @@ class BudgetAdvisorAgent(BaseAgent):
             if income and abs(delta) > 0.05 * income:
                 direction = "over" if delta > 0 else "under"
                 diffs.append(
-                    f"- {bucket}: you're at ${actual.get(bucket, 0.0):,.0f} vs recommended "
-                    f"${recommended[bucket]:,.0f} ({direction} by ${abs(delta):,.0f})."
+                    f"- {bucket}: you're at ₹{actual.get(bucket, 0.0):,.0f} vs recommended "
+                    f"₹{recommended[bucket]:,.0f} ({direction} by ₹{abs(delta):,.0f})."
                 )
         body = "\n".join(diffs) if diffs else "Your spending is roughly in line with the 50/30/20 guideline."
         return "**Budget Advice (offline rule-based mode)**\n" + body

@@ -115,7 +115,7 @@ def test_required_commitments_covers_only_the_unreflected_shortfall():
 
 
 def test_required_commitments_never_double_subtracts_a_minimum_already_in_expenses():
-    """The core of the fix this phase exists for: a $120 minimum already
+    """The core of the fix this phase exists for: a ₹120 minimum already
     paid (and therefore already inside average_monthly_expenses via the
     Debt Payment category) must not also appear in required_commitments."""
     debts = [{"name": "Credit Card", "balance": 4200.0, "apr": 22.9, "min_payment": 120.0}]
@@ -259,3 +259,103 @@ def test_calculate_financial_snapshot_never_crashes_on_any_committed_fixture(pat
     snapshot = _snapshot_for(profile)
     assert snapshot["schema_version"] == "1.0"
     assert 0 <= snapshot["health_score"] <= 100
+
+
+# --------------------------------------------------------------------------
+# confirmed_monthly_expenses: a user-confirmed figure overrides the
+# transaction-derived average everywhere downstream; absent, behavior is
+# unchanged (this is what keeps every golden fixture's non-net_worth numbers
+# byte-identical after this field was added).
+# --------------------------------------------------------------------------
+
+def test_confirmed_monthly_expenses_overrides_the_transaction_derived_average():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    baseline = _snapshot_for(profile)
+    assert baseline["metrics"]["average_monthly_expenses"] != 5000.0  # sanity: override actually differs
+
+    overridden_profile = dict(profile, confirmed_monthly_expenses=5000.0)
+    overridden = _snapshot_for(overridden_profile)
+    assert overridden["metrics"]["average_monthly_expenses"] == 5000.0
+    # downstream figures that depend on average_monthly_expenses must move too
+    assert overridden["metrics"]["gross_surplus"] == profile["monthly_income"] - 5000.0
+    assert overridden["metrics"]["allocatable_surplus"] != baseline["metrics"]["allocatable_surplus"]
+
+
+def test_confirmed_monthly_expenses_absent_leaves_behavior_unchanged():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    assert "confirmed_monthly_expenses" not in profile
+    snapshot = _snapshot_for(profile)
+    assert snapshot["metrics"]["average_monthly_expenses"] > 0  # still the transaction-derived value
+
+
+# --------------------------------------------------------------------------
+# net_worth: current_savings + current_investments - total_debt.
+# current_investments absent is a real 0, not an unknown; current_savings
+# absent is the one case that makes net_worth itself unknowable.
+# --------------------------------------------------------------------------
+
+def test_net_worth_combines_savings_investments_and_debt():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    profile = dict(profile, current_investments=25000.0)
+    snapshot = _snapshot_for(profile)
+    expected = profile["current_savings"] + 25000.0 - snapshot["metrics"]["total_debt"]
+    assert snapshot["metrics"]["net_worth"] == expected
+
+
+def test_net_worth_treats_absent_investments_as_zero_not_unknown():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    assert "current_investments" not in profile
+    snapshot = _snapshot_for(profile)
+    assert snapshot["metrics"]["net_worth"] == profile["current_savings"] - snapshot["metrics"]["total_debt"]
+
+
+def test_net_worth_is_none_when_current_savings_is_unknown():
+    profile = _load(GOLDEN_DIR / "stable_high_surplus.input.json")
+    profile = dict(profile, current_savings=None)
+    snapshot = _snapshot_for(profile)
+    assert snapshot["metrics"]["net_worth"] is None
+
+
+# --------------------------------------------------------------------------
+# required_monthly_contribution_with_growth(): future-value-of-annuity
+# required payment, generalizing goal_feasibility()'s linear division for a
+# rate-aware comparison (Scenario Comparison's FD/PPF/SIP template).
+# --------------------------------------------------------------------------
+
+def test_required_contribution_with_growth_matches_manual_annuity_calculation():
+    # 12 months at 12% APR (1%/month): PMT * [(1.01^12 - 1)/0.01] = 100000
+    result = fc.required_monthly_contribution_with_growth(100_000, 12, 0.0, 0.12)
+    monthly_rate = 0.01
+    annuity_factor = ((1 + monthly_rate) ** 12 - 1) / monthly_rate
+    assert result == pytest.approx(100_000 / annuity_factor)
+
+
+def test_required_contribution_with_growth_falls_back_to_linear_at_zero_rate():
+    with_growth = fc.required_monthly_contribution_with_growth(100_000, 10, 0.0, 0.0)
+    linear = fc.goal_feasibility(100_000, 10, surplus=0, current=0.0)["required_monthly"]
+    assert with_growth == linear
+
+
+def test_required_contribution_with_growth_falls_back_to_linear_when_rate_is_none():
+    with_growth = fc.required_monthly_contribution_with_growth(100_000, 10, 0.0, None)
+    linear = fc.goal_feasibility(100_000, 10, surplus=0, current=0.0)["required_monthly"]
+    assert with_growth == linear
+
+
+def test_required_contribution_with_growth_returns_zero_when_current_already_exceeds_target():
+    result = fc.required_monthly_contribution_with_growth(50_000, 12, 60_000, 0.12)
+    assert result == 0.0
+
+
+def test_required_contribution_with_growth_returns_full_remaining_when_months_is_zero():
+    result = fc.required_monthly_contribution_with_growth(50_000, 0, 0.0, 0.12)
+    assert result == 50_000
+
+
+def test_required_contribution_with_growth_is_lower_than_linear_for_a_positive_rate():
+    """The whole point of the growth-aware formula: compounding does some
+    of the work, so the required contribution must be strictly lower than
+    the naive linear (0%-rate) division for any positive rate."""
+    with_growth = fc.required_monthly_contribution_with_growth(100_000, 24, 0.0, 0.10)
+    linear = fc.goal_feasibility(100_000, 24, surplus=0, current=0.0)["required_monthly"]
+    assert with_growth < linear

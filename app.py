@@ -41,13 +41,28 @@ st.set_page_config(page_title="AI Financial Coach", page_icon="\U0001f4b0", layo
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
 DEFAULT_DEBTS = [
-    {"name": "Credit Card", "balance": 4200.0, "apr": 22.9, "min_payment": 120.0},
-    {"name": "Student Loan", "balance": 18500.0, "apr": 5.8, "min_payment": 210.0},
+    {"name": "Credit Card", "balance": 45000.0, "apr": 36.0, "min_payment": 3500.0},
+    {"name": "Car Loan", "balance": 150000.0, "apr": 9.5, "min_payment": 4200.0},
 ]
 
+_DEBT_COLUMN_HELP = {
+    "name": "What you're calling this debt - shown in the payoff plan and roadmap.",
+    "balance": "The total amount you currently owe on this debt.",
+    "apr": "Annual Percentage Rate - the yearly interest cost on the outstanding balance. "
+           "Higher-APR debt is prioritized for extra payments.",
+    "min_payment": "The minimum monthly payment required to keep this debt current.",
+}
+_GOAL_COLUMN_HELP = {
+    "name": "What you're saving toward - shown in the roadmap and goal tracker.",
+    "amount": "The total amount you need to reach this goal.",
+    "months": "How many months you want to reach it in - a shorter timeline needs a higher monthly contribution.",
+    "current": "How much you've already saved toward this specific goal.",
+    "priority": "high/medium/low - when surplus is tight, higher-priority goals are funded first.",
+}
+
 DEFAULT_GOALS = [
-    {"name": "Emergency Fund Boost", "amount": 3000.0, "months": 6, "current": 500.0, "priority": "high"},
-    {"name": "Vacation", "amount": 4000.0, "months": 10, "current": 200.0, "priority": "medium"},
+    {"name": "Emergency Fund Boost", "amount": 75000.0, "months": 6, "current": 15000.0, "priority": "high"},
+    {"name": "Vacation", "amount": 100000.0, "months": 10, "current": 10000.0, "priority": "medium"},
 ]
 
 @st.cache_data
@@ -55,6 +70,29 @@ def load_sample_transactions() -> pd.DataFrame:
     df = pd.read_csv(os.path.join(DATA_DIR, "sample_transactions.csv"))
     df["date"] = pd.to_datetime(df["date"])
     return df
+
+
+def _suggest_monthly_income(categorized_df: pd.DataFrame):
+    """A starting point for Step 3's income field, not a substitute for
+    confirming it: the average observed monthly income (via the same
+    monthly_cashflow() aggregation the rest of the app already uses) is a
+    more robust point estimate than any single transaction - a salary that
+    varies slightly month to month, or one atypical month, does not swing
+    the suggestion the way "just the most recent transaction" would. The
+    user still edits/confirms a number already grounded in their own data
+    instead of typing one from scratch that might silently disagree with it.
+
+    `current_savings` gets no equivalent suggestion - a transaction ledger
+    has no concept of a current account balance (only cash movements over
+    the uploaded window), so there is nothing honest to derive it from;
+    inventing one would violate "unknown data is None, never a fabricated
+    number." That field stays user-entered only."""
+    if categorized_df.empty:
+        return None
+    monthly = fc.monthly_cashflow(categorized_df)
+    if monthly.empty or not (monthly["income"] > 0).any():
+        return None
+    return float(monthly["income"].mean())
 
 
 def _categorized_df_to_transactions(df: pd.DataFrame) -> list:
@@ -80,12 +118,27 @@ def _build_profile(categorized_df: pd.DataFrame) -> dict:
         "schema_version": "1.0",
         "transactions": _categorized_df_to_transactions(categorized_df),
         "monthly_income": fields["monthly_income"],
+        "confirmed_monthly_expenses": fields["confirmed_monthly_expenses"],
         "current_savings": fields["current_savings"],
+        "current_investments": fields["current_investments"],
         "debts": fields["debts"],
         "goals": fields["goals"],
         "constraints": fields["constraints"],
         "assumptions": fields["assumptions"] or default_assumptions(),
     }
+
+
+def _suggest_average_monthly_expenses(categorized_df: pd.DataFrame) -> float:
+    """Step 3's expenses pre-fill: the same transaction-derived average
+    `calculate_financial_snapshot()` would use if the user never touched
+    this field. Unlike current_savings, an "average monthly expenses"
+    figure genuinely is computable from the transaction history alone -
+    this suggestion is a starting point the user confirms or overrides,
+    exactly like the income suggestion above."""
+    if categorized_df.empty:
+        return 0.0
+    monthly = fc.monthly_cashflow(categorized_df)
+    return float(monthly["expenses"].mean()) if not monthly.empty else 0.0
 
 
 # Phase 10 (UX & Narrative Polish): presentation only - these map already-
@@ -180,7 +233,7 @@ if review_items:
         column_config={
             "transaction_index": st.column_config.NumberColumn(disabled=True),
             "description": st.column_config.TextColumn(disabled=True),
-            "amount": st.column_config.NumberColumn(disabled=True, format="$%.2f"),
+            "amount": st.column_config.NumberColumn(disabled=True, format="₹%.2f"),
             "category": st.column_config.SelectboxColumn(options=known_categories, required=True),
         },
     )
@@ -199,51 +252,102 @@ st.header("Step 3 - Confirm your details")
 fields = app_state.get_profile_fields()
 current_assumptions = fields["assumptions"] or default_assumptions()
 
+income_suggestion = _suggest_monthly_income(working_df)
+expense_suggestion = _suggest_average_monthly_expenses(working_df)
+# Only substitutes a suggestion when nothing has been confirmed yet - once
+# a field is set (by the user, on any earlier rerun), that confirmed value
+# always wins over a freshly recomputed suggestion.
+income_default = fields["monthly_income"] if fields["monthly_income"] is not None else (income_suggestion or 0.0)
+expenses_default = (
+    fields["confirmed_monthly_expenses"] if fields["confirmed_monthly_expenses"] is not None else expense_suggestion
+)
+
+st.subheader("Income & expenses")
 col1, col2 = st.columns(2)
 monthly_income = col1.number_input(
-    "Monthly income ($)", min_value=0.0, value=float(fields["monthly_income"] or 0.0), step=100.0, key="monthly_income_input",
+    "Monthly income (₹)", min_value=0.0, value=float(income_default), step=100.0, key="monthly_income_input",
+    help=(
+        f"Pre-filled from your average observed monthly income (₹{income_suggestion:,.0f}) in the uploaded "
+        "data - confirm or adjust if that's not representative." if income_suggestion is not None
+        else "No income transaction found in the uploaded data - enter this manually."
+    ),
 )
-current_savings = col2.number_input(
-    "Current savings ($)", min_value=0.0, value=float(fields["current_savings"] or 0.0), step=100.0, key="current_savings_input",
+confirmed_monthly_expenses = col2.number_input(
+    "Monthly expenses (₹)", min_value=0.0, value=float(expenses_default), step=100.0, key="expenses_input",
+    help=(
+        f"Pre-filled from your average observed monthly spending (₹{expense_suggestion:,.0f}) in the uploaded "
+        "data - confirm or adjust if a month here wasn't typical. This figure replaces the transaction-derived "
+        "average everywhere in the analysis once confirmed."
+    ),
 )
+
+st.subheader("Savings")
+col3, col4 = st.columns(2)
+current_savings = col3.number_input(
+    "Current savings balance (₹)", min_value=0.0, value=float(fields["current_savings"] or 0.0), step=100.0,
+    key="current_savings_input",
+    help="Your current balance isn't in the transaction history (it only shows cash movements, not an account "
+         "balance) - this is always entered manually.",
+)
+savings_apy = col4.number_input(
+    "Interest rate you're currently earning on it (% APY)", min_value=0.0,
+    value=float(current_assumptions.get("savings_apy", 0.04)) * 100, step=0.25, key="apy_input",
+    help="The annual interest rate your savings account currently pays - used to project how this balance grows.",
+) / 100.0
+
+st.subheader("Investments")
+col5, col6 = st.columns(2)
+current_investments = col5.number_input(
+    "Current investment total (₹)", min_value=0.0, value=float(fields["current_investments"] or 0.0), step=100.0,
+    key="current_investments_input",
+    help="Combined current value of mutual funds, stocks, PPF, FDs held as investments, etc. - separate from your "
+         "savings account balance above.",
+)
+investment_cagr_input = col6.number_input(
+    "CAGR you're presently earning (%)", min_value=0.0,
+    value=(float(current_assumptions.get("investment_cagr") or 0.0) * 100), step=0.25, key="investment_cagr_input",
+    help="Your investments' compound annual growth rate. When this clears your savings APY by a meaningful margin, "
+         "the roadmap routes further surplus toward investment contribution instead of plain savings.",
+)
+investment_cagr = (investment_cagr_input / 100.0) if current_investments > 0 else None
 
 st.subheader("Debts")
 debts_df = pd.DataFrame(fields["debts"] or DEFAULT_DEBTS)
-edited_debts = st.data_editor(debts_df, num_rows="dynamic", width="stretch", key="debts_editor")
+edited_debts = st.data_editor(
+    debts_df, num_rows="dynamic", width="stretch", key="debts_editor",
+    column_config={
+        col: st.column_config.Column(help=help_text) for col, help_text in _DEBT_COLUMN_HELP.items()
+    },
+)
 debts = edited_debts.dropna().to_dict("records")
 
 st.subheader("Goals")
 goals_df = pd.DataFrame(fields["goals"] or DEFAULT_GOALS)
-edited_goals = st.data_editor(goals_df, num_rows="dynamic", width="stretch", key="goals_editor")
+edited_goals = st.data_editor(
+    goals_df, num_rows="dynamic", width="stretch", key="goals_editor",
+    column_config={
+        col: st.column_config.Column(help=help_text) for col, help_text in _GOAL_COLUMN_HELP.items()
+    },
+)
 goals = edited_goals.dropna().to_dict("records")
 
-st.subheader("Constraints & assumptions")
-c1, c2, c3 = st.columns(3)
-buffer_value = c1.number_input(
-    "Minimum monthly buffer ($)", min_value=0.0,
-    value=float((fields["constraints"] or {}).get("minimum_monthly_buffer", 0.0)), step=50.0, key="buffer_input",
-)
-emergency_months = c2.number_input(
-    "Emergency fund target (months)", min_value=0.0, value=float(current_assumptions.get("emergency_fund_months", 3)),
-    step=1.0, key="emergency_months_input",
-)
-savings_apy = c3.number_input(
-    "Savings APY (%)", min_value=0.0, value=float(current_assumptions.get("savings_apy", 0.04)) * 100, step=0.5,
-    key="apy_input",
-) / 100.0
-
-assumptions = {**current_assumptions, "emergency_fund_months": emergency_months, "savings_apy": savings_apy}
-constraints = {"minimum_monthly_buffer": buffer_value, "protected_categories": (fields["constraints"] or {}).get("protected_categories", [])}
+# minimum_monthly_buffer and emergency_fund_months (target) are no longer
+# confirmed here - they live in the Scenario Comparison section below the
+# tabs (Step 5) as "preview, then apply" controls instead of an upfront ask.
+assumptions = {**current_assumptions, "savings_apy": savings_apy, "investment_cagr": investment_cagr}
+constraints = fields["constraints"] or {"minimum_monthly_buffer": 0.0, "protected_categories": []}
 
 app_state.set_profile_fields(
     # monthly_income also drives the "required inputs" gate below - a
     # widget-default 0.0 is treated as "not yet entered" there. current_savings
-    # has no such gate: a literal, deliberate (or default/untouched) $0 is a
+    # has no such gate: a literal, deliberate (or default/untouched) ₹0 is a
     # real, computable answer, and collapsing it to None would silently turn
     # emergency_fund_months into "unknown" for a user who genuinely has no
     # savings - the exact "a real zero must not become None" failure mode
-    # Phase 11's rehearsal exists to catch.
+    # Phase 11's rehearsal exists to catch. confirmed_monthly_expenses and
+    # current_investments follow the same "a real zero is real" reasoning.
     monthly_income=monthly_income or None, current_savings=current_savings,
+    confirmed_monthly_expenses=confirmed_monthly_expenses, current_investments=current_investments or None,
     debts=debts, goals=goals, constraints=constraints, assumptions=assumptions,
 )
 
@@ -291,11 +395,12 @@ tabs = st.tabs([
 # --- Overview -----------------------------------------------------------
 with tabs[0]:
     metrics = snapshot["metrics"]
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Health score", f"{snapshot['health_score']}/100", snapshot["health_band"])
-    c2.metric("Gross surplus", f"${metrics['gross_surplus']:,.0f}" if metrics.get("gross_surplus") is not None else "unknown")
-    c3.metric("Allocatable surplus", f"${metrics['allocatable_surplus']:,.0f}" if metrics.get("allocatable_surplus") is not None else "unknown")
-    c4.metric("Total debt", f"${metrics['total_debt']:,.0f}")
+    c2.metric("Gross surplus", f"₹{metrics['gross_surplus']:,.0f}" if metrics.get("gross_surplus") is not None else "unknown")
+    c3.metric("Allocatable surplus", f"₹{metrics['allocatable_surplus']:,.0f}" if metrics.get("allocatable_surplus") is not None else "unknown")
+    c4.metric("Total debt", f"₹{metrics['total_debt']:,.0f}")
+    c5.metric("Net worth", f"₹{metrics['net_worth']:,.0f}" if metrics.get("net_worth") is not None else "unknown")
 
     data_quality_flags = snapshot.get("data_quality_flags") or []
     if data_quality_flags:
@@ -317,12 +422,12 @@ with tabs[0]:
     st.subheader("\U0001f6e3️ Roadmap")
     st.caption(
         f"Buffer reserved (planning constraint, not a distributed transfer): "
-        f"${roadmap['allocation']['buffer_reserved']:,.2f}"
+        f"₹{roadmap['allocation']['buffer_reserved']:,.2f}"
     )
     for action in sorted(roadmap["actions"], key=lambda a: a["priority"]):
         icon = _SEVERITY_ICON.get(action["severity"], "")
         st.markdown(
-            f"{action['priority']}. {icon} **{action['title']}** ({action['timeframe']}): ${action['monthly_amount']:,.2f}/mo"
+            f"{action['priority']}. {icon} **{action['title']}** ({action['timeframe']}): ₹{action['monthly_amount']:,.2f}/mo"
         )
         st.caption(action["rationale"])
 
@@ -376,7 +481,7 @@ with tabs[5]:
     for gr in goal_results:
         goal = gr["supporting_tables"]["goal"]
         with st.container(border=True):
-            st.markdown(f"**{goal['name']}** -- ${goal.get('current', 0):,.0f} / ${goal['amount']:,.0f}")
+            st.markdown(f"**{goal['name']}** -- ₹{goal.get('current', 0):,.0f} / ₹{goal['amount']:,.0f}")
             progress = min(goal.get("current", 0) / goal["amount"], 1.0) if goal["amount"] else 0.0
             st.progress(progress)
             st.markdown(gr["narrative"])
@@ -399,39 +504,163 @@ with tabs[6]:
             st.markdown(reply)
         app_state.append_chat("assistant", reply)
 
-# --------------------------------------------------- Step 5: scenario preview --
-st.header("Step 5 - Preview a scenario")
-st.caption("Adjust an assumption to preview its effect - nothing here changes your confirmed plan until you apply it.")
-with st.form("scenario_form"):
-    sc1, sc2, sc3 = st.columns(3)
-    preview_buffer = sc1.number_input("Preview: minimum monthly buffer ($)", min_value=0.0, value=float(constraints["minimum_monthly_buffer"]), step=50.0)
-    preview_apy = sc2.number_input("Preview: savings APY (%)", min_value=0.0, value=float(assumptions["savings_apy"]) * 100, step=0.5) / 100.0
-    preview_ef_months = sc3.number_input("Preview: emergency fund target (months)", min_value=0.0, value=float(assumptions["emergency_fund_months"]), step=1.0)
-    preview_clicked = st.form_submit_button("Preview scenario")
+# --------------------------------------------------- Step 5: scenario comparison --
+# A single section below the tabs - never duplicated into the Overview or
+# any specialist tab. Nothing here commits until Step 3's confirmed values
+# are re-entered and Step 4 is re-run; every comparison below is a
+# read-only "what if," built from utils.finance_calc/utils.scenarios
+# functions this app already trusts (simulate_payoff, savings_projection,
+# required_monthly_contribution_with_growth, compare_scenarios) - no new
+# modeling, no LLM involved anywhere in this section.
+st.header("Step 5 - Compare scenarios")
+st.caption("Explore what-if changes to your plan. Nothing here changes your confirmed plan above.")
 
-if preview_clicked:
-    updates = {"savings_apy": preview_apy, "emergency_fund_months": preview_ef_months}
-    issues = sc.validate_assumption_updates(profile, updates)
-    if issues:
-        st.error("\n".join(issues))
-    else:
-        adjusted_profile = sc.apply_assumptions(profile, updates)
-        adjusted_profile["constraints"] = {**adjusted_profile["constraints"], "minimum_monthly_buffer": preview_buffer}
-        (_, adjusted_snapshot, _, _, _), _ = _run_pipeline(adjusted_profile)
-        comparison = sc.compare_scenarios(snapshot, adjusted_snapshot)
-        app_state.set_scenario_preview(comparison)
-
+_PRESET_RATES = (("Fixed Deposit (FD)", 0.065), ("PPF", 0.071), ("Equity SIP (illustrative)", 0.12))
 _SCENARIO_METRIC_LABELS = {
     "gross_surplus": "Gross surplus", "allocatable_surplus": "Allocatable surplus",
     "savings_rate_percent": "Savings rate (%)", "debt_to_income_percent": "Debt-to-income (%)",
     "emergency_fund_months": "Emergency fund (months)", "health_score": "Health score",
 }
 
-scenario_preview = app_state.get_scenario_preview()
-if scenario_preview:
-    preview_df = pd.DataFrame(scenario_preview).T.rename(index=_SCENARIO_METRIC_LABELS)
-    preview_df.index.name = "Metric"
-    st.dataframe(preview_df, width="stretch")
+scenario_tabs = st.tabs([
+    "Plan assumptions", "Idle savings vs. investing", "Cut discretionary spending",
+    "Prepay debt vs. invest", "FD / PPF / SIP for a goal",
+])
+
+# --- Plan assumptions (buffer + emergency fund target - moved off Step 3) ---
+with scenario_tabs[0]:
+    st.caption("Adjust the buffer or emergency fund target to preview its effect on the plan.")
+    with st.form("scenario_form"):
+        sc1, sc2 = st.columns(2)
+        preview_buffer = sc1.number_input(
+            "Preview: minimum monthly buffer (₹)", min_value=0.0,
+            value=float(constraints["minimum_monthly_buffer"]), step=50.0,
+        )
+        preview_ef_months = sc2.number_input(
+            "Preview: emergency fund target (months)", min_value=0.0,
+            value=float(assumptions["emergency_fund_months"]), step=1.0,
+        )
+        preview_clicked = st.form_submit_button("Preview scenario")
+
+    if preview_clicked:
+        issues = sc.validate_assumption_updates(profile, {"emergency_fund_months": preview_ef_months})
+        if issues:
+            st.error("\n".join(issues))
+        else:
+            adjusted_profile = sc.apply_assumptions(profile, {"emergency_fund_months": preview_ef_months})
+            adjusted_profile["constraints"] = {**adjusted_profile["constraints"], "minimum_monthly_buffer": preview_buffer}
+            (_, adjusted_snapshot, _, _, _), _ = _run_pipeline(adjusted_profile)
+            comparison = sc.compare_scenarios(snapshot, adjusted_snapshot)
+            app_state.set_scenario_preview(comparison)
+
+    scenario_preview = app_state.get_scenario_preview()
+    if scenario_preview:
+        preview_df = pd.DataFrame(scenario_preview).T.rename(index=_SCENARIO_METRIC_LABELS)
+        preview_df.index.name = "Metric"
+        st.dataframe(preview_df, width="stretch")
+
+# --- Idle savings vs. investing it ---
+with scenario_tabs[1]:
+    st.caption("Compare leaving an amount in savings versus moving it into your investments, at your confirmed rates.")
+    ic1, ic2, ic3 = st.columns(3)
+    idle_amount = ic1.number_input(
+        "Amount to compare (₹)", min_value=0.0, value=float(current_savings), step=1000.0, key="idle_amount_input",
+    )
+    idle_horizon_years = ic2.number_input("Over how many years?", min_value=1, value=5, step=1, key="idle_horizon_input")
+    idle_cagr_pct = ic3.number_input(
+        "Investment CAGR to compare against (%)", min_value=0.0,
+        value=(investment_cagr * 100) if investment_cagr else 12.0, step=0.5, key="idle_cagr_input",
+    )
+    if idle_amount > 0:
+        horizon_months = int(idle_horizon_years * 12)
+        savings_outcome = fc.savings_projection(idle_amount, 0.0, months=horizon_months, apr=savings_apy)
+        investment_outcome = fc.savings_projection(idle_amount, 0.0, months=horizon_months, apr=idle_cagr_pct / 100.0)
+        oc1, oc2 = st.columns(2)
+        oc1.metric(f"Staying in savings ({savings_apy * 100:.1f}% APY)", f"₹{savings_outcome[-1]['balance']:,.0f}")
+        oc2.metric(f"Moved to investment ({idle_cagr_pct:.1f}% CAGR)", f"₹{investment_outcome[-1]['balance']:,.0f}")
+        st.caption(f"Difference over {idle_horizon_years:.0f} year(s): ₹{investment_outcome[-1]['balance'] - savings_outcome[-1]['balance']:,.0f}")
+
+# --- Cut discretionary spending by X% ---
+with scenario_tabs[2]:
+    st.caption("Preview the effect of cutting discretionary (non-essential, non-savings) spending.")
+    wants_categories = {
+        t["category"] for t in profile["transactions"]
+        if t["category"] not in fc.NEEDS_CATS and t["category"] not in fc.SAVINGS_CATS and t["category"] != "Income"
+    }
+    if not wants_categories:
+        st.caption("No discretionary categories found in your transaction history.")
+    else:
+        cut_percent = st.slider("Cut discretionary spending by:", min_value=0, max_value=50, value=10, step=5, format="%d%%")
+        st.caption(f"Categories treated as discretionary: {', '.join(sorted(wants_categories))}")
+        if cut_percent > 0:
+            reduced_profile = sc.apply_expense_reduction(profile, wants_categories, reduction_fraction=cut_percent / 100.0)
+            # A confirmed_monthly_expenses override reflects the *actual*
+            # (pre-cut) spending pattern - left in place, it would shadow
+            # every transaction change this scenario just made, and the
+            # comparison would show zero effect no matter the cut. Clearing
+            # it lets the reduced transactions' own average through, which
+            # is what "if I cut spending" should actually show.
+            reduced_profile["confirmed_monthly_expenses"] = None
+            (_, reduced_snapshot, _, _, _), _ = _run_pipeline(reduced_profile)
+            comparison = sc.compare_scenarios(snapshot, reduced_snapshot)
+            preview_df = pd.DataFrame(comparison).T.rename(index=_SCENARIO_METRIC_LABELS)
+            preview_df.index.name = "Metric"
+            st.dataframe(preview_df, width="stretch")
+
+# --- Prepay debt vs. invest the surplus ---
+with scenario_tabs[3]:
+    st.caption("Compare paying extra toward debt against investing the same amount instead.")
+    if not profile["debts"]:
+        st.caption("No debts on file - nothing to compare here.")
+    else:
+        pc1, pc2 = st.columns(2)
+        prepay_amount = pc1.number_input(
+            "Extra monthly amount to compare (₹)", min_value=0.0,
+            value=float(roadmap["allocation"]["debt_extra_payment"] or 500.0), step=100.0, key="prepay_amount_input",
+        )
+        prepay_strategy = pc2.selectbox("Payoff strategy", ["avalanche", "snowball"], key="prepay_strategy_input")
+        prepay_cagr_pct = st.number_input(
+            "Investment CAGR to compare against (%)", min_value=0.0,
+            value=(investment_cagr * 100) if investment_cagr else 12.0, step=0.5, key="prepay_cagr_input",
+        )
+        if prepay_amount > 0:
+            with_extra = fc.simulate_payoff(profile["debts"], extra_monthly=prepay_amount, strategy=prepay_strategy)
+            baseline = fc.simulate_payoff(profile["debts"], extra_monthly=0.0, strategy=prepay_strategy)
+            interest_saved = baseline["total_interest"] - with_extra["total_interest"]
+            invested_instead = fc.savings_projection(0.0, prepay_amount, months=with_extra["months_to_payoff"], apr=prepay_cagr_pct / 100.0)
+            pc3, pc4 = st.columns(2)
+            pc3.metric(
+                f"Prepay debt ({with_extra['months_to_payoff']} months to debt-free)",
+                f"₹{interest_saved:,.0f} interest saved",
+            )
+            pc4.metric(
+                f"Invest instead over the same {with_extra['months_to_payoff']} months ({prepay_cagr_pct:.1f}% CAGR)",
+                f"₹{invested_instead[-1]['balance']:,.0f}",
+            )
+
+# --- FD vs PPF vs Equity SIP for a goal ---
+with scenario_tabs[4]:
+    st.caption("Compare the monthly contribution required to reach a goal at a few common Indian rate benchmarks.")
+    if not profile["goals"]:
+        st.caption("Add a goal in Step 3 to compare rates for it.")
+    else:
+        goal_names = [g["name"] for g in profile["goals"]]
+        selected_goal_name = st.selectbox("Goal", goal_names, key="goal_rate_compare_input")
+        selected_goal = next(g for g in profile["goals"] if g["name"] == selected_goal_name)
+        rate_rows = [
+            {
+                "Option": label,
+                "Rate": f"{rate * 100:.1f}%",
+                "Required monthly contribution": fc.required_monthly_contribution_with_growth(
+                    selected_goal["amount"], selected_goal["months"], selected_goal.get("current", 0.0), rate,
+                ),
+            }
+            for label, rate in _PRESET_RATES
+        ]
+        rate_df = pd.DataFrame(rate_rows)
+        rate_df["Required monthly contribution"] = rate_df["Required monthly contribution"].map(lambda v: f"₹{v:,.0f}")
+        st.dataframe(rate_df, width="stretch", hide_index=True)
+        st.caption("These rates are illustrative benchmarks, not a recommendation or a guarantee of future returns.")
 
 # --------------------------------------------------- Step 6: download --------
 st.header("Step 6 - Download your report")
@@ -442,8 +671,8 @@ dl1.download_button(
     file_name=f"{report_package['filename_stem']}.md", mime="text/markdown",
 )
 _TRACKER_COLUMN_LABELS = {
-    "month": "Month", "planned_savings": "Planned Savings ($)",
-    "extra_debt_payment": "Extra Debt Payment ($)", "goal_contributions": "Goal Contributions ($)",
+    "month": "Month", "planned_savings": "Planned Savings (₹)",
+    "extra_debt_payment": "Extra Debt Payment (₹)", "goal_contributions": "Goal Contributions (₹)",
 }
 tracker_csv = pd.DataFrame(report_package["tracker_rows"]).rename(columns=_TRACKER_COLUMN_LABELS).to_csv(index=False)
 dl2.download_button(

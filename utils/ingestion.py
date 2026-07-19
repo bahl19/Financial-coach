@@ -31,19 +31,43 @@ from utils.contracts import ReviewItem, Transaction
 # --------------------------------------------------------------------------
 
 CATEGORY_KEYWORDS = {
-    "Rent/Mortgage": ["rent", "mortgage", "landlord", "apartments"],
-    "Groceries": ["grocery", "groceries", "supermarket", "whole foods", "trader joe", "safeway", "kroger"],
-    "Dining": ["restaurant", "cafe", "coffee", "starbucks", "doordash", "ubereats", "grubhub",
-               "mcdonald", "chipotle", "rooftop"],
-    "Transport": ["uber", "lyft", "gas station", "shell", "chevron", "exxon", "parking", "transit", "metro"],
-    "Utilities": ["electric", "water bill", "gas bill", "internet", "comcast", "at&t", "verizon", "utility"],
-    "Subscriptions": ["netflix", "spotify", "hulu", "amazon prime", "subscription", "gym", "planet fitness"],
-    "Entertainment": ["movie", "cinema", "amc", "concert", "steam", "playstation", "xbox", "tickets"],
-    "Shopping": ["amazon.com", "target", "walmart", "best buy", "mall"],
-    "Insurance": ["insurance", "geico", "state farm"],
-    "Healthcare": ["pharmacy", "cvs", "walgreens", "doctor", "clinic", "hospital"],
-    "Debt Payment": ["credit card payment", "loan payment", "student loan", "auto loan"],
-    "Savings/Investing": ["transfer to savings", "401k", "ira contribution", "brokerage", "investment"],
+    "Rent/Mortgage": ["rent", "mortgage", "landlord", "apartments", "house rent", "flat owner"],
+    "Groceries": [
+        "grocery", "groceries", "supermarket", "whole foods", "trader joe", "safeway", "kroger",
+        "bigbasket", "big basket", "dmart", "d-mart", "reliance fresh", "reliance smart", "more supermarket",
+        "jiomart", "nature's basket", "spencer's",
+    ],
+    "Dining": [
+        "restaurant", "cafe", "coffee", "starbucks", "doordash", "ubereats", "grubhub",
+        "mcdonald", "chipotle", "rooftop", "swiggy", "zomato", "dominos", "cafe coffee day", "ccd",
+    ],
+    "Transport": [
+        "uber", "lyft", "gas station", "shell", "chevron", "exxon", "parking", "transit", "metro",
+        "ola", "rapido", "irctc", "petrol", "petrol pump", "hpcl", "bpcl", "indian oil", "fuel",
+    ],
+    "Utilities": [
+        "electric", "water bill", "gas bill", "internet", "comcast", "at&t", "verizon", "utility",
+        "bescom", "electricity board", "discom", "jio", "airtel", "vodafone", "vi ", "broadband", "gas cylinder", "lpg",
+    ],
+    "Subscriptions": [
+        "netflix", "spotify", "hulu", "amazon prime", "subscription", "gym", "planet fitness",
+        "hotstar", "jiocinema", "sonyliv", "cult.fit", "cultfit",
+    ],
+    "Entertainment": ["movie", "cinema", "amc", "concert", "steam", "playstation", "xbox", "tickets", "pvr", "inox", "bookmyshow"],
+    "Shopping": ["amazon.com", "target", "walmart", "best buy", "mall", "amazon.in", "flipkart", "myntra", "ajio"],
+    "Insurance": ["insurance", "geico", "state farm", "lic", "policybazaar", "hdfc life", "sbi life"],
+    "Healthcare": [
+        "pharmacy", "cvs", "walgreens", "doctor", "clinic", "hospital",
+        "apollo pharmacy", "1mg", "practo", "medplus", "netmeds",
+    ],
+    "Debt Payment": [
+        "credit card payment", "loan payment", "student loan", "auto loan",
+        "emi", "personal loan", "home loan", "car loan",
+    ],
+    "Savings/Investing": [
+        "transfer to savings", "401k", "ira contribution", "brokerage", "investment",
+        "sip", "mutual fund", "zerodha", "groww", "ppf", "nps", "recurring deposit", "rd deposit", "fixed deposit",
+    ],
 }
 
 _UNMATCHED_CATEGORY = "Other"
